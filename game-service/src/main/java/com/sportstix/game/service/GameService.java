@@ -48,11 +48,11 @@ public class GameService {
 
         Game savedGame = gameRepository.save(game);
 
-        int totalSeats = initializeGameSeats(savedGame, stadium);
+        List<GameSeat> gameSeats = initializeGameSeats(savedGame, stadium);
 
-        log.info("Created game id={} with {} seats at {}", savedGame.getId(), totalSeats, stadium.getName());
+        log.info("Created game id={} with {} seats at {}", savedGame.getId(), gameSeats.size(), stadium.getName());
 
-        gameEventProducer.publishSeatInitialized(savedGame.getId(), totalSeats);
+        gameEventProducer.publishSeatInitialized(savedGame, gameSeats);
 
         return GameResponse.from(savedGame);
     }
@@ -97,7 +97,7 @@ public class GameService {
                 .toList();
     }
 
-    private int initializeGameSeats(Game game, Stadium stadium) {
+    private List<GameSeat> initializeGameSeats(Game game, Stadium stadium) {
         List<Long> sectionIds = stadium.getSections().stream()
                 .map(Section::getId)
                 .toList();
@@ -112,8 +112,6 @@ public class GameService {
                         .build())
                 .toList();
 
-        gameSeatRepository.saveAll(gameSeats);
-
-        return gameSeats.size();
+        return gameSeatRepository.saveAll(gameSeats);
     }
 }

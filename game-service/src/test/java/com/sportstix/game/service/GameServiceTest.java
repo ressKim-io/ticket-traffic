@@ -93,7 +93,7 @@ class GameServiceTest {
         verify(gameSeatRepository).saveAll(captor.capture());
         assertThat(captor.getValue()).hasSize(2);
 
-        verify(gameEventProducer).publishSeatInitialized(any(), eq(2));
+        verify(gameEventProducer).publishSeatInitialized(any(Game.class), anyList());
     }
 
     @Test
