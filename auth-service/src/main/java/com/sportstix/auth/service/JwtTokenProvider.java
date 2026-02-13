@@ -6,6 +6,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -16,9 +17,13 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
+    public static final String TOKEN_TYPE_ACCESS = "access";
+    public static final String TOKEN_TYPE_REFRESH = "refresh";
+
     private final SecretKey secretKey;
     private final JwtParser jwtParser;
     private final long accessTokenExpiry;
+    @Getter
     private final long refreshTokenExpiry;
 
     public JwtTokenProvider(
@@ -32,11 +37,11 @@ public class JwtTokenProvider {
     }
 
     public String createAccessToken(Member member) {
-        return createToken(member, accessTokenExpiry);
+        return createToken(member, accessTokenExpiry, TOKEN_TYPE_ACCESS);
     }
 
     public String createRefreshToken(Member member) {
-        return createToken(member, refreshTokenExpiry);
+        return createToken(member, refreshTokenExpiry, TOKEN_TYPE_REFRESH);
     }
 
     public Claims parseToken(String token) {
@@ -56,12 +61,13 @@ public class JwtTokenProvider {
         }
     }
 
-    private String createToken(Member member, long expiry) {
+    private String createToken(Member member, long expiry, String tokenType) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(member.getId()))
                 .claim("email", member.getEmail())
                 .claim("role", member.getRole().name())
+                .claim("type", tokenType)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiry))
                 .signWith(secretKey)

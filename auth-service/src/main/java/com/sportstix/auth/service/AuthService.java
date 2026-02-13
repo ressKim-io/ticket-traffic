@@ -54,17 +54,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
-        String accessToken = jwtTokenProvider.createAccessToken(member);
-        String refreshToken = jwtTokenProvider.createRefreshToken(member);
-
-        // Store refresh token in Redis
-        redisTemplate.opsForValue().set(
-                REFRESH_TOKEN_PREFIX + member.getId(),
-                refreshToken,
-                7, TimeUnit.DAYS
-        );
-
-        return TokenResponse.of(accessToken, refreshToken);
+        return issueTokens(member);
     }
 
     @Transactional(readOnly = true)
@@ -74,6 +64,13 @@ public class AuthService {
         }
 
         Claims claims = jwtTokenProvider.parseToken(request.refreshToken());
+
+        // Verify token type is refresh (not access)
+        String tokenType = claims.get("type", String.class);
+        if (!JwtTokenProvider.TOKEN_TYPE_REFRESH.equals(tokenType)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
         Long memberId = Long.valueOf(claims.getSubject());
 
         // Verify refresh token matches the one stored in Redis
@@ -85,20 +82,24 @@ public class AuthService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        String accessToken = jwtTokenProvider.createAccessToken(member);
-        String refreshToken = jwtTokenProvider.createRefreshToken(member);
-
-        // Rotate refresh token
-        redisTemplate.opsForValue().set(
-                REFRESH_TOKEN_PREFIX + member.getId(),
-                refreshToken,
-                7, TimeUnit.DAYS
-        );
-
-        return TokenResponse.of(accessToken, refreshToken);
+        return issueTokens(member);
     }
 
     public void logout(Long memberId) {
         redisTemplate.delete(REFRESH_TOKEN_PREFIX + memberId);
+    }
+
+    private TokenResponse issueTokens(Member member) {
+        String accessToken = jwtTokenProvider.createAccessToken(member);
+        String refreshToken = jwtTokenProvider.createRefreshToken(member);
+
+        redisTemplate.opsForValue().set(
+                REFRESH_TOKEN_PREFIX + member.getId(),
+                refreshToken,
+                jwtTokenProvider.getRefreshTokenExpiry(),
+                TimeUnit.MILLISECONDS
+        );
+
+        return TokenResponse.of(accessToken, refreshToken);
     }
 }
