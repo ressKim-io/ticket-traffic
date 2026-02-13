@@ -1,0 +1,45 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Java
+*.class
+*.jar
+!gradle/wrapper/*.jar
+*.war
+
+# Spring Boot
+*.log
+
+# Node (frontend)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Docker
+docker-compose.override.yml
+
+# jOOQ generated (regenerate with ./gradlew generateJooq)
+# Keep tracked but mention in case of conflicts
+
+# Misc
+*.swp
+*.swo
+*~

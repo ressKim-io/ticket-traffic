@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'sportstix'
+
+include 'common'
+include 'gateway-service'
+include 'auth-service'
+include 'game-service'
+include 'queue-service'
+include 'booking-service'
+include 'payment-service'
+include 'admin-service'
