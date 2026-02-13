@@ -8,8 +8,10 @@ import com.sportstix.queue.event.producer.QueueEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Slf4j
@@ -29,21 +31,20 @@ public class QueueService {
         String queueKey = queueKey(gameId);
         String userIdStr = String.valueOf(userId);
 
-        // Check if already in queue
-        Double existingScore = redisTemplate.opsForZSet().score(queueKey, userIdStr);
-        if (existingScore != null) {
-            return getQueueStatus(gameId, userId);
-        }
-
         // Check if already has token (already eligible)
         if (tokenService.hasToken(gameId, userId)) {
             String token = tokenService.getToken(gameId, userId);
             return QueueStatusResponse.eligible(gameId, token);
         }
 
-        // Add to sorted set with timestamp as score
+        // ZADD NX - returns true only if newly added (atomic check-and-add)
         double score = System.currentTimeMillis();
-        redisTemplate.opsForZSet().add(queueKey, userIdStr, score);
+        Boolean added = redisTemplate.opsForZSet().addIfAbsent(queueKey, userIdStr, score);
+
+        if (Boolean.FALSE.equals(added)) {
+            // Already in queue, return current status
+            return getQueueStatus(gameId, userId);
+        }
 
         Long rank = redisTemplate.opsForZSet().rank(queueKey, userIdStr);
         Long totalWaiting = redisTemplate.opsForZSet().size(queueKey);
@@ -86,19 +87,29 @@ public class QueueService {
     }
 
     public void leaveQueue(Long gameId, Long userId) {
-        String queueKey = queueKey(gameId);
-        redisTemplate.opsForZSet().remove(queueKey, String.valueOf(userId));
+        String userIdStr = String.valueOf(userId);
+        redisTemplate.opsForZSet().remove(queueKey(gameId), userIdStr);
+        redisTemplate.opsForSet().remove(activeKey(gameId), userIdStr);
         tokenService.revokeToken(gameId, userId);
         log.info("User {} left queue for game {}", userId, gameId);
     }
 
+    /**
+     * Atomically pop the next batch using ZPOPMIN to prevent race conditions.
+     */
     public Set<String> popNextBatch(Long gameId) {
         String queueKey = queueKey(gameId);
         int batchSize = queueProperties.getBatchSize();
 
-        Set<String> batch = redisTemplate.opsForZSet().range(queueKey, 0, batchSize - 1);
-        if (batch != null && !batch.isEmpty()) {
-            redisTemplate.opsForZSet().remove(queueKey, batch.toArray());
+        Set<ZSetOperations.TypedTuple<String>> tuples =
+                redisTemplate.opsForZSet().popMin(queueKey, batchSize);
+        if (tuples == null || tuples.isEmpty()) {
+            return Set.of();
+        }
+
+        Set<String> batch = new LinkedHashSet<>();
+        for (ZSetOperations.TypedTuple<String> tuple : tuples) {
+            batch.add(tuple.getValue());
         }
         return batch;
     }

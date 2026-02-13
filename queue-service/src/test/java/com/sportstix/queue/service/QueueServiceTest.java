@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.DefaultTypedTuple;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -18,7 +19,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -58,9 +58,8 @@ class QueueServiceTest {
 
     @Test
     void enterQueue_newUser_addsToSortedSet() {
-        given(zSetOperations.score("queue:1", "100")).willReturn(null);
         given(tokenService.hasToken(1L, 100L)).willReturn(false);
-        given(zSetOperations.add(eq("queue:1"), eq("100"), anyDouble())).willReturn(true);
+        given(zSetOperations.addIfAbsent(eq("queue:1"), eq("100"), anyDouble())).willReturn(true);
         given(zSetOperations.rank("queue:1", "100")).willReturn(0L);
         given(zSetOperations.size("queue:1")).willReturn(1L);
 
@@ -73,9 +72,9 @@ class QueueServiceTest {
 
     @Test
     void enterQueue_existingUser_returnsCurrentStatus() {
-        given(zSetOperations.score("queue:1", "100")).willReturn(1000.0);
-        // getQueueStatus path
         given(tokenService.hasToken(1L, 100L)).willReturn(false);
+        given(zSetOperations.addIfAbsent(eq("queue:1"), eq("100"), anyDouble())).willReturn(false);
+        // getQueueStatus path
         given(zSetOperations.rank("queue:1", "100")).willReturn(5L);
         given(zSetOperations.size("queue:1")).willReturn(50L);
 
@@ -87,7 +86,6 @@ class QueueServiceTest {
 
     @Test
     void enterQueue_hasToken_returnsEligible() {
-        given(zSetOperations.score("queue:1", "100")).willReturn(null);
         given(tokenService.hasToken(1L, 100L)).willReturn(true);
         given(tokenService.getToken(1L, 100L)).willReturn("test-token");
 
@@ -107,25 +105,34 @@ class QueueServiceTest {
     }
 
     @Test
-    void leaveQueue_removesFromQueueAndToken() {
+    void leaveQueue_removesFromQueueAndTokenAndActive() {
         queueService.leaveQueue(1L, 100L);
 
         verify(zSetOperations).remove("queue:1", "100");
+        verify(setOperations).remove("queue:active:1", "100");
         verify(tokenService).revokeToken(1L, 100L);
     }
 
     @Test
-    void popNextBatch_returnsBatchAndRemoves() {
-        Set<String> batch = new LinkedHashSet<>();
-        batch.add("1");
-        batch.add("2");
-        batch.add("3");
-        given(zSetOperations.range("queue:1", 0, 99)).willReturn(batch);
+    void popNextBatch_returnsBatchAtomically() {
+        Set<ZSetOperations.TypedTuple<String>> tuples = new LinkedHashSet<>();
+        tuples.add(new DefaultTypedTuple<>("1", 0.0));
+        tuples.add(new DefaultTypedTuple<>("2", 1.0));
+        tuples.add(new DefaultTypedTuple<>("3", 2.0));
+        given(zSetOperations.popMin("queue:1", 100)).willReturn(tuples);
 
         Set<String> result = queueService.popNextBatch(1L);
 
-        assertThat(result).hasSize(3);
-        verify(zSetOperations).remove(eq("queue:1"), eq("1"), eq("2"), eq("3"));
+        assertThat(result).containsExactly("1", "2", "3");
+    }
+
+    @Test
+    void popNextBatch_emptyQueue_returnsEmptySet() {
+        given(zSetOperations.popMin("queue:1", 100)).willReturn(Set.of());
+
+        Set<String> result = queueService.popNextBatch(1L);
+
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -139,8 +146,6 @@ class QueueServiceTest {
 
     @Test
     void addToActive_addsToSet() {
-        given(redisTemplate.opsForSet()).willReturn(setOperations);
-
         queueService.addToActive(1L, 100L);
 
         verify(setOperations).add("queue:active:1", "100");

@@ -2,11 +2,14 @@ package com.sportstix.queue.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.DefaultTypedTuple;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -59,10 +62,12 @@ public class WaitingRoomService {
         List<String> shuffled = new ArrayList<>(members);
         Collections.shuffle(shuffled);
 
-        // Bulk ZADD with sequential scores
+        // Batch ZADD with TypedTuple set (single round-trip)
+        Set<ZSetOperations.TypedTuple<String>> tuples = new HashSet<>();
         for (int i = 0; i < shuffled.size(); i++) {
-            redisTemplate.opsForZSet().add(queueKey, shuffled.get(i), i);
+            tuples.add(new DefaultTypedTuple<>(shuffled.get(i), (double) i));
         }
+        redisTemplate.opsForZSet().add(queueKey, tuples);
 
         // Clean up waiting room
         redisTemplate.delete(waitingKey);
