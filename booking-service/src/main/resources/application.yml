@@ -18,6 +18,9 @@ spring:
           batch_size: 50
         order_inserts: true
 
+  jooq:
+    sql-dialect: postgres
+
   flyway:
     enabled: true
     locations: classpath:db/migration

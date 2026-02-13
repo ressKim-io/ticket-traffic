@@ -1,4 +1,5 @@
 apply plugin: 'org.springframework.boot'
+apply plugin: 'nu.studer.jooq'
 
 dependencies {
     implementation project(':common')
@@ -9,5 +10,48 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
-    implementation 'org.jooq:jooq:3.19.8'
+    implementation 'org.springframework.boot:spring-boot-starter-jooq'
+
+    jooqGenerator 'org.jooq:jooq-meta-extensions:3.19.8'
+    jooqGenerator 'com.h2database:h2'
+
+    testImplementation 'com.h2database:h2'
+}
+
+jooq {
+    version = '3.19.8'
+    configurations {
+        main {
+            generationTool {
+                generator {
+                    database {
+                        name = 'org.jooq.meta.extensions.ddl.DDLDatabase'
+                        properties {
+                            property {
+                                key = 'scripts'
+                                value = 'src/main/resources/db/migration/*.sql'
+                            }
+                            property {
+                                key = 'sort'
+                                value = 'flyway'
+                            }
+                            property {
+                                key = 'defaultNameCase'
+                                value = 'lower'
+                            }
+                        }
+                    }
+                    generate {
+                        deprecated = false
+                        records = true
+                        pojos = false
+                        fluentSetters = true
+                    }
+                    target {
+                        packageName = 'com.sportstix.booking.jooq.generated'
+                    }
+                }
+            }
+        }
+    }
 }
