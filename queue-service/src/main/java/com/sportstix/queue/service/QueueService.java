@@ -114,6 +114,13 @@ public class QueueService {
         return batch;
     }
 
+    /**
+     * Peek at users in the queue without removing them (for position broadcasting).
+     */
+    public Set<String> peekBatch(Long gameId, long count) {
+        return redisTemplate.opsForZSet().range(queueKey(gameId), 0, count - 1);
+    }
+
     public Long getQueueSize(Long gameId) {
         Long size = redisTemplate.opsForZSet().size(queueKey(gameId));
         return size != null ? size : 0;
