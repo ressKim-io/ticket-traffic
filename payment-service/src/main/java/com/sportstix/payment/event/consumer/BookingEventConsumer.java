@@ -26,6 +26,11 @@ public class BookingEventConsumer {
         log.info("Received booking-created event: bookingId={}, userId={}, gameId={}",
                 event.getBookingId(), event.getUserId(), event.getGameId());
 
+        if (localBookingRepository.existsById(event.getBookingId())) {
+            log.warn("Duplicate booking-created event ignored: bookingId={}", event.getBookingId());
+            return;
+        }
+
         LocalBooking localBooking = new LocalBooking(
                 event.getBookingId(),
                 event.getUserId(),

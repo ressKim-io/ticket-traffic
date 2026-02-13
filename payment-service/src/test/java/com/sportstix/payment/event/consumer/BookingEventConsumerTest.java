@@ -29,6 +29,7 @@ class BookingEventConsumerTest {
 
     @Test
     void handleBookingCreated_createsLocalBooking() {
+        given(localBookingRepository.existsById(1L)).willReturn(false);
         BookingEvent event = BookingEvent.created(1L, 100L, 10L, 50L);
 
         consumer.handleBookingCreated(event);
@@ -39,6 +40,16 @@ class BookingEventConsumerTest {
         assertThat(captor.getValue().getUserId()).isEqualTo(100L);
         assertThat(captor.getValue().getGameId()).isEqualTo(10L);
         assertThat(captor.getValue().getStatus()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void handleBookingCreated_duplicate_ignored() {
+        given(localBookingRepository.existsById(1L)).willReturn(true);
+        BookingEvent event = BookingEvent.created(1L, 100L, 10L, 50L);
+
+        consumer.handleBookingCreated(event);
+
+        verify(localBookingRepository, never()).save(any());
     }
 
     @Test
