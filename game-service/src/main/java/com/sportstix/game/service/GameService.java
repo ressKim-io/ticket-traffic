@@ -17,9 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -64,7 +63,7 @@ public class GameService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND,
                         "Game not found: " + gameId));
 
-        List<SectionSeatSummary> sections = gameSeatRepository.countSeatsBySection(gameId)
+        List<SectionSeatSummary> sections = gameSeatRepository.countSeatsBySection(gameId, GameSeatStatus.AVAILABLE)
                 .stream()
                 .map(row -> new SectionSeatSummary(
                         (Long) row[0],
@@ -99,10 +98,11 @@ public class GameService {
     }
 
     private int initializeGameSeats(Game game, Stadium stadium) {
-        List<Seat> allSeats = new ArrayList<>();
-        for (Section section : stadium.getSections()) {
-            allSeats.addAll(seatRepository.findBySectionId(section.getId()));
-        }
+        List<Long> sectionIds = stadium.getSections().stream()
+                .map(Section::getId)
+                .toList();
+
+        List<Seat> allSeats = seatRepository.findBySectionIdIn(sectionIds);
 
         List<GameSeat> gameSeats = allSeats.stream()
                 .map(seat -> GameSeat.builder()

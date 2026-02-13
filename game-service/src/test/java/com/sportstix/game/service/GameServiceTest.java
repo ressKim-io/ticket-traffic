@@ -26,7 +26,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -75,7 +78,7 @@ class GameServiceTest {
 
         given(stadiumRepository.findByIdWithSections(1L)).willReturn(Optional.of(stadium));
         given(gameRepository.save(any(Game.class))).willAnswer(inv -> inv.getArgument(0));
-        given(seatRepository.findBySectionId(any())).willReturn(List.of(seat1, seat2));
+        given(seatRepository.findBySectionIdIn(anyCollection())).willReturn(List.of(seat1, seat2));
         given(gameSeatRepository.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
 
         // when
@@ -126,7 +129,7 @@ class GameServiceTest {
         given(gameRepository.findByIdWithStadium(1L)).willReturn(Optional.of(game));
         List<Object[]> sectionRows = new ArrayList<>();
         sectionRows.add(new Object[]{1L, "A Block", SeatGrade.VIP, 50L, 48L});
-        given(gameSeatRepository.countSeatsBySection(1L)).willReturn(sectionRows);
+        given(gameSeatRepository.countSeatsBySection(eq(1L), any(GameSeatStatus.class))).willReturn(sectionRows);
 
         GameDetailResponse result = gameService.getGame(1L);
 

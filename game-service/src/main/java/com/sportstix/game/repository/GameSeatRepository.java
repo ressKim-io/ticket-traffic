@@ -27,11 +27,14 @@ public interface GameSeatRepository extends JpaRepository<GameSeat, Long> {
 
     @Query("""
             SELECT s.section.id, s.section.name, s.section.grade,
-                   COUNT(gs), SUM(CASE WHEN gs.status = 'AVAILABLE' THEN 1 ELSE 0 END)
+                   COUNT(gs), SUM(CASE WHEN gs.status = :availableStatus THEN 1 ELSE 0 END)
             FROM GameSeat gs
             JOIN gs.seat s
             WHERE gs.game.id = :gameId
             GROUP BY s.section.id, s.section.name, s.section.grade
             """)
-    List<Object[]> countSeatsBySection(@Param("gameId") Long gameId);
+    List<Object[]> countSeatsBySection(
+            @Param("gameId") Long gameId,
+            @Param("availableStatus") GameSeatStatus availableStatus
+    );
 }
