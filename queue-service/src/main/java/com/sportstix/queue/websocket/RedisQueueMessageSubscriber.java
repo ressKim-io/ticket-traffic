@@ -27,13 +27,18 @@ public class RedisQueueMessageSubscriber {
         try {
             QueueUpdateMessage update = objectMapper.readValue(message, QueueUpdateMessage.class);
 
-            // Send to user-specific topic: /topic/queue/{gameId}/{userId}
+            // Send to user-specific topic with full message (including token)
             String destination = String.format("/topic/queue/%d/%d", update.gameId(), update.userId());
             messagingTemplate.convertAndSend(destination, update);
 
-            // Also send to game-level topic for admin/monitoring
+            // Game-level topic: sanitized (no token, no userId for privacy)
             String gameTopic = String.format("/topic/queue/%d", update.gameId());
-            messagingTemplate.convertAndSend(gameTopic, update);
+            QueueUpdateMessage sanitized = new QueueUpdateMessage(
+                    update.gameId(), null, update.status(),
+                    update.rank(), update.totalWaiting(),
+                    update.estimatedWaitSeconds(), null
+            );
+            messagingTemplate.convertAndSend(gameTopic, sanitized);
 
         } catch (JsonProcessingException e) {
             log.error("Failed to deserialize queue update message: {}", message, e);

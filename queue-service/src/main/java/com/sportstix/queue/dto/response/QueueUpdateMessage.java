@@ -23,4 +23,8 @@ public record QueueUpdateMessage(
     public static QueueUpdateMessage completed(Long gameId, Long userId) {
         return new QueueUpdateMessage(gameId, userId, "COMPLETED", null, null, null, null);
     }
+
+    public static QueueUpdateMessage error(Long gameId, String reason) {
+        return new QueueUpdateMessage(gameId, null, "ERROR", null, null, null, reason);
+    }
 }

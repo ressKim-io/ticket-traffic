@@ -118,6 +118,9 @@ public class QueueService {
      * Peek at users in the queue without removing them (for position broadcasting).
      */
     public Set<String> peekBatch(Long gameId, long count) {
+        if (count <= 0) {
+            return Set.of();
+        }
         return redisTemplate.opsForZSet().range(queueKey(gameId), 0, count - 1);
     }
 

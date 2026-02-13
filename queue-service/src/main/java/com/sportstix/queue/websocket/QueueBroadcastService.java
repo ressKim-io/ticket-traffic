@@ -33,18 +33,4 @@ public class QueueBroadcastService {
         }
     }
 
-    /**
-     * Broadcast position updates for all users in a game queue.
-     */
-    public void broadcastPositionUpdates(Long gameId, Long totalWaiting,
-                                         java.util.Map<Long, Long> userRanks,
-                                         java.util.function.IntUnaryOperator estimateWaitFn) {
-        for (var entry : userRanks.entrySet()) {
-            Long userId = entry.getKey();
-            long rank = entry.getValue() + 1;
-            int waitSeconds = estimateWaitFn.applyAsInt((int) rank);
-
-            broadcastUpdate(QueueUpdateMessage.waiting(gameId, userId, rank, totalWaiting, waitSeconds));
-        }
-    }
 }

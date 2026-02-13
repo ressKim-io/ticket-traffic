@@ -33,3 +33,6 @@ queue:
   batch-size: ${QUEUE_BATCH_SIZE:100}
   token-ttl-seconds: ${QUEUE_TOKEN_TTL:600}
   process-interval-ms: ${QUEUE_PROCESS_INTERVAL:3000}
+
+websocket:
+  allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000}

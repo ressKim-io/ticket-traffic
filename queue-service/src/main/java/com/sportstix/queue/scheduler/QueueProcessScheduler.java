@@ -40,8 +40,12 @@ public class QueueProcessScheduler {
         }
 
         for (String gameIdStr : activeGameIds) {
-            Long gameId = Long.parseLong(gameIdStr);
-            processGameQueue(gameId);
+            try {
+                Long gameId = Long.parseLong(gameIdStr);
+                processGameQueue(gameId);
+            } catch (Exception e) {
+                log.error("Failed to process queue for game {}: {}", gameIdStr, e.getMessage(), e);
+            }
         }
     }
 

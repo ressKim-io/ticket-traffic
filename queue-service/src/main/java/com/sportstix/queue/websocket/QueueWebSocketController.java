@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.annotation.SendToUser;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 
 /**
@@ -29,25 +30,36 @@ public class QueueWebSocketController {
     @SendToUser("/topic/queue/status")
     public QueueUpdateMessage getStatus(
             @DestinationVariable Long gameId,
-            org.springframework.messaging.simp.stomp.StompHeaderAccessor headerAccessor
+            StompHeaderAccessor headerAccessor
     ) {
         String userIdHeader = headerAccessor.getFirstNativeHeader("X-User-Id");
         if (userIdHeader == null) {
             log.warn("Missing X-User-Id header in WebSocket status request");
-            return null;
+            return QueueUpdateMessage.error(gameId, "Missing X-User-Id header");
         }
 
-        Long userId = Long.parseLong(userIdHeader);
-        QueueStatusResponse status = queueService.getQueueStatus(gameId, userId);
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid X-User-Id header: {}", userIdHeader);
+            return QueueUpdateMessage.error(gameId, "Invalid X-User-Id header");
+        }
 
-        return new QueueUpdateMessage(
-                status.gameId(),
-                userId,
-                status.status(),
-                status.rank(),
-                status.totalWaiting(),
-                status.estimatedWaitSeconds(),
-                status.token()
-        );
+        try {
+            QueueStatusResponse status = queueService.getQueueStatus(gameId, userId);
+            return new QueueUpdateMessage(
+                    status.gameId(),
+                    userId,
+                    status.status(),
+                    status.rank(),
+                    status.totalWaiting(),
+                    status.estimatedWaitSeconds(),
+                    status.token()
+            );
+        } catch (Exception e) {
+            log.warn("Failed to get queue status: gameId={}, userId={}", gameId, userId, e);
+            return QueueUpdateMessage.error(gameId, "Not in queue");
+        }
     }
 }
