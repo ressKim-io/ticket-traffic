@@ -7,62 +7,90 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Tracks active WebSocket sessions per game on this pod.
- * Used to efficiently determine which users are connected locally
- * and need to receive broadcasts.
- *
- * Key structure:
- * - gameId -> Set of userIds connected on this pod
+ * Supports multiple sessions per user (e.g. multiple browser tabs)
+ * via reference counting.
  */
 @Slf4j
 @Component
 public class WebSocketSessionRegistry {
 
-    // gameId -> set of userIds subscribed on this pod
-    private final Map<Long, Set<Long>> gameSubscriptions = new ConcurrentHashMap<>();
+    // sessionId -> set of GameUser subscriptions
+    private final Map<String, Set<GameUser>> sessionSubscriptions = new ConcurrentHashMap<>();
 
-    // userId -> sessionId for disconnect tracking
-    private final Map<String, Long> sessionUserMap = new ConcurrentHashMap<>();
+    // gameId -> (userId -> session ref count)
+    private final Map<Long, ConcurrentHashMap<Long, AtomicInteger>> gameUserCounts = new ConcurrentHashMap<>();
+
+    // userId -> set of sessionIds (for O(1) isConnected lookup)
+    private final Map<Long, Set<String>> userSessions = new ConcurrentHashMap<>();
 
     public void registerSubscription(Long gameId, Long userId, String sessionId) {
-        gameSubscriptions.computeIfAbsent(gameId, k -> ConcurrentHashMap.newKeySet())
-                .add(userId);
-        sessionUserMap.put(sessionId, userId);
+        // Track session -> subscription mapping
+        sessionSubscriptions.computeIfAbsent(sessionId, k -> ConcurrentHashMap.newKeySet())
+                .add(new GameUser(gameId, userId));
+
+        // Increment ref count for gameId -> userId
+        gameUserCounts.computeIfAbsent(gameId, k -> new ConcurrentHashMap<>())
+                .computeIfAbsent(userId, k -> new AtomicInteger(0))
+                .incrementAndGet();
+
+        // Track userId -> sessionIds for O(1) isConnected
+        userSessions.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet())
+                .add(sessionId);
+
         log.debug("Registered subscription: gameId={}, userId={}, sessionId={}", gameId, userId, sessionId);
     }
 
     public void removeSession(String sessionId) {
-        Long userId = sessionUserMap.remove(sessionId);
-        if (userId == null) {
+        Set<GameUser> subscriptions = sessionSubscriptions.remove(sessionId);
+        if (subscriptions == null || subscriptions.isEmpty()) {
             return;
         }
 
-        // Remove from all game subscriptions
-        gameSubscriptions.forEach((gameId, users) -> {
-            if (users.remove(userId)) {
-                log.debug("Removed subscription: gameId={}, userId={}, sessionId={}", gameId, userId, sessionId);
-                if (users.isEmpty()) {
-                    gameSubscriptions.remove(gameId);
+        for (GameUser gu : subscriptions) {
+            // Decrement ref count; remove userId entry if count reaches 0
+            gameUserCounts.computeIfPresent(gu.gameId(), (gid, userCounts) -> {
+                AtomicInteger count = userCounts.get(gu.userId());
+                if (count != null && count.decrementAndGet() <= 0) {
+                    userCounts.remove(gu.userId());
                 }
-            }
-        });
+                return userCounts.isEmpty() ? null : userCounts;
+            });
+
+            // Clean up userId -> sessionIds
+            userSessions.computeIfPresent(gu.userId(), (uid, sessions) -> {
+                sessions.remove(sessionId);
+                return sessions.isEmpty() ? null : sessions;
+            });
+        }
+
+        log.debug("Removed session: sessionId={}, subscriptions={}", sessionId, subscriptions.size());
     }
 
     public Set<Long> getSubscribedUsers(Long gameId) {
-        return gameSubscriptions.getOrDefault(gameId, Collections.emptySet());
+        ConcurrentHashMap<Long, AtomicInteger> userCounts = gameUserCounts.get(gameId);
+        if (userCounts == null || userCounts.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return Set.copyOf(userCounts.keySet());
     }
 
     public int getConnectionCount(Long gameId) {
-        return gameSubscriptions.getOrDefault(gameId, Collections.emptySet()).size();
+        ConcurrentHashMap<Long, AtomicInteger> userCounts = gameUserCounts.get(gameId);
+        return userCounts != null ? userCounts.size() : 0;
     }
 
     public int getTotalConnections() {
-        return sessionUserMap.size();
+        return sessionSubscriptions.size();
     }
 
     public boolean isConnected(Long userId) {
-        return sessionUserMap.containsValue(userId);
+        Set<String> sessions = userSessions.get(userId);
+        return sessions != null && !sessions.isEmpty();
     }
+
+    private record GameUser(Long gameId, Long userId) {}
 }

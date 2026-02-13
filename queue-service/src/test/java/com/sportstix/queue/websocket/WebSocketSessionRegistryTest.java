@@ -4,6 +4,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -72,6 +76,19 @@ class WebSocketSessionRegistryTest {
     }
 
     @Test
+    void getSubscribedUsers_returnsImmutableCopy() {
+        registry.registerSubscription(1L, 100L, "session-1");
+
+        Set<Long> users = registry.getSubscribedUsers(1L);
+
+        // Returned set should be immutable
+        org.junit.jupiter.api.Assertions.assertThrows(
+                UnsupportedOperationException.class,
+                () -> users.add(999L)
+        );
+    }
+
+    @Test
     void isConnected_registeredUser_returnsTrue() {
         registry.registerSubscription(1L, 100L, "session-1");
 
@@ -80,7 +97,7 @@ class WebSocketSessionRegistryTest {
     }
 
     @Test
-    void multipleGames_sameUser() {
+    void multipleGames_sameSession() {
         registry.registerSubscription(1L, 100L, "session-1");
         registry.registerSubscription(2L, 100L, "session-1");
 
@@ -91,5 +108,59 @@ class WebSocketSessionRegistryTest {
 
         assertThat(registry.getSubscribedUsers(1L)).isEmpty();
         assertThat(registry.getSubscribedUsers(2L)).isEmpty();
+        assertThat(registry.isConnected(100L)).isFalse();
+    }
+
+    @Test
+    void sameUser_multipleSessions_disconnectOne_retainsOther() {
+        // User 100 opens two tabs
+        registry.registerSubscription(1L, 100L, "session-1");
+        registry.registerSubscription(1L, 100L, "session-2");
+
+        assertThat(registry.getSubscribedUsers(1L)).containsExactly(100L);
+        assertThat(registry.getTotalConnections()).isEqualTo(2);
+
+        // Close first tab
+        registry.removeSession("session-1");
+
+        // User should still be tracked via second session
+        assertThat(registry.getSubscribedUsers(1L)).containsExactly(100L);
+        assertThat(registry.isConnected(100L)).isTrue();
+        assertThat(registry.getTotalConnections()).isEqualTo(1);
+
+        // Close second tab
+        registry.removeSession("session-2");
+
+        assertThat(registry.getSubscribedUsers(1L)).isEmpty();
+        assertThat(registry.isConnected(100L)).isFalse();
+        assertThat(registry.getTotalConnections()).isEqualTo(0);
+    }
+
+    @Test
+    void concurrentRegisterAndRemove_noDataLoss() throws InterruptedException {
+        int threadCount = 100;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            long userId = i;
+            String sessionId = "session-" + i;
+            executor.submit(() -> {
+                try {
+                    registry.registerSubscription(1L, userId, sessionId);
+                    Thread.sleep(1);
+                    registry.removeSession(sessionId);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await(5, TimeUnit.SECONDS);
+        assertThat(registry.getTotalConnections()).isEqualTo(0);
+        assertThat(registry.getSubscribedUsers(1L)).isEmpty();
+        executor.shutdown();
     }
 }

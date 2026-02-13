@@ -9,6 +9,8 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 
+import java.security.Principal;
+
 /**
  * Listens for WebSocket lifecycle events to manage session tracking.
  */
@@ -39,10 +41,20 @@ public class WebSocketEventListener {
 
         // Track user-specific queue subscriptions: /topic/queue/{gameId}/{userId}
         if (destination.matches("/topic/queue/\\d+/\\d+")) {
-            String[] parts = destination.split("/");
-            Long gameId = Long.parseLong(parts[3]);
-            Long userId = Long.parseLong(parts[4]);
-            sessionRegistry.registerSubscription(gameId, userId, sessionId);
+            Principal user = accessor.getUser();
+            if (user == null) {
+                log.warn("Unauthenticated subscription event for {}", destination);
+                return;
+            }
+
+            try {
+                String[] parts = destination.split("/");
+                Long gameId = Long.parseLong(parts[3]);
+                Long userId = Long.valueOf(user.getName());
+                sessionRegistry.registerSubscription(gameId, userId, sessionId);
+            } catch (NumberFormatException e) {
+                log.warn("Failed to parse gameId/userId from destination: {}", destination, e);
+            }
         }
     }
 
