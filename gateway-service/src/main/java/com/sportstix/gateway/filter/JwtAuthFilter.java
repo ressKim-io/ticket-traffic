@@ -1,6 +1,8 @@
 package com.sportstix.gateway.filter;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +18,6 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -29,13 +30,15 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private static final String HEADER_USER_ROLE = "X-User-Role";
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    private final SecretKey secretKey;
+    private final JwtParser jwtParser;
     private final List<String> publicPaths;
 
     public JwtAuthFilter(
             @Value("${gateway.jwt.secret}") String secret,
             @Value("${gateway.jwt.public-paths}") List<String> publicPaths) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.jwtParser = Jwts.parser()
+                .verifyWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
+                .build();
         this.publicPaths = publicPaths;
     }
 
@@ -44,7 +47,14 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
 
         if (isPublicPath(path)) {
-            return chain.filter(exchange);
+            // Strip any spoofed identity headers on public paths
+            ServerHttpRequest cleaned = exchange.getRequest().mutate()
+                    .headers(h -> {
+                        h.remove(HEADER_USER_ID);
+                        h.remove(HEADER_USER_ROLE);
+                    })
+                    .build();
+            return chain.filter(exchange.mutate().request(cleaned).build());
         }
 
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
@@ -54,19 +64,25 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         String token = authHeader.substring(BEARER_PREFIX.length());
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+            Claims claims = jwtParser.parseSignedClaims(token).getPayload();
+
+            String role = claims.get("role", String.class);
+            if (role == null) {
+                log.warn("JWT missing required 'role' claim for subject: {}", claims.getSubject());
+                return unauthorized(exchange);
+            }
 
             ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                    .headers(h -> {
+                        h.remove(HEADER_USER_ID);
+                        h.remove(HEADER_USER_ROLE);
+                    })
                     .header(HEADER_USER_ID, claims.getSubject())
-                    .header(HEADER_USER_ROLE, claims.get("role", String.class))
+                    .header(HEADER_USER_ROLE, role)
                     .build();
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
-        } catch (Exception e) {
+        } catch (JwtException e) {
             log.warn("JWT validation failed: {}", e.getMessage());
             return unauthorized(exchange);
         }

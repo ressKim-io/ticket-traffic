@@ -16,22 +16,16 @@ spring:
           uri: http://auth-service:8081
           predicates:
             - Path=/api/v1/auth/**
-          filters:
-            - StripPrefix=0
 
         - id: game-service
           uri: http://game-service:8082
           predicates:
             - Path=/api/v1/games/**
-          filters:
-            - StripPrefix=0
 
         - id: queue-service
           uri: http://queue-service:8083
           predicates:
             - Path=/api/v1/queue/**
-          filters:
-            - StripPrefix=0
 
         - id: queue-ws
           uri: ws://queue-service:8083
@@ -42,8 +36,6 @@ spring:
           uri: http://booking-service:8084
           predicates:
             - Path=/api/v1/bookings/**
-          filters:
-            - StripPrefix=0
 
         - id: booking-ws
           uri: ws://booking-service:8084
@@ -54,15 +46,11 @@ spring:
           uri: http://payment-service:8085
           predicates:
             - Path=/api/v1/payments/**
-          filters:
-            - StripPrefix=0
 
         - id: admin-service
           uri: http://admin-service:8086
           predicates:
             - Path=/api/v1/admin/**
-          filters:
-            - StripPrefix=0
 
   data:
     redis:
@@ -71,6 +59,7 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
 
 management:
   endpoints:
@@ -79,7 +68,7 @@ management:
         include: health,info,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
 
 gateway:
   jwt:
@@ -89,4 +78,4 @@ gateway:
       - /api/v1/auth/signup
       - /api/v1/auth/refresh
       - /api/v1/games
-      - /actuator/**
+      - /actuator/health
