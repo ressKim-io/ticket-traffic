@@ -6,8 +6,19 @@ spring:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
 server:
-  port: 8083
+  port: ${SERVER_PORT:8083}
 
 management:
   endpoints:
@@ -16,4 +27,9 @@ management:
         include: health,info,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
+
+queue:
+  batch-size: ${QUEUE_BATCH_SIZE:100}
+  token-ttl-seconds: ${QUEUE_TOKEN_TTL:600}
+  process-interval-ms: ${QUEUE_PROCESS_INTERVAL:3000}
