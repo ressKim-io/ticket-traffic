@@ -57,4 +57,30 @@ class DomainEventTest {
         assertThat(event.getGameId()).isEqualTo(200L);
         assertThat(event.getTotalSeats()).isEqualTo(25000);
     }
+
+    @Test
+    void gameEvent_infoUpdated_hasNullTotalSeats() {
+        GameEvent event = GameEvent.infoUpdated(200L);
+
+        assertThat(event.getEventType()).isEqualTo("GAME_INFO_UPDATED");
+        assertThat(event.getTotalSeats()).isNull();
+    }
+
+    @Test
+    void domainEvents_haveUniqueEventIds() {
+        BookingEvent e1 = BookingEvent.created(1L, 1L, 1L, 1L);
+        BookingEvent e2 = BookingEvent.created(1L, 1L, 1L, 1L);
+
+        assertThat(e1.getEventId()).isNotEqualTo(e2.getEventId());
+    }
+
+    @Test
+    void eventTypeConstants_matchFactoryOutput() {
+        assertThat(BookingEvent.created(1L, 1L, 1L, 1L).getEventType())
+                .isEqualTo(BookingEvent.TYPE_CREATED);
+        assertThat(SeatEvent.held(1L, 1L, 1L).getEventType())
+                .isEqualTo(SeatEvent.TYPE_HELD);
+        assertThat(PaymentEvent.completed(1L, 1L, 1L, BigDecimal.ONE).getEventType())
+                .isEqualTo(PaymentEvent.TYPE_COMPLETED);
+    }
 }

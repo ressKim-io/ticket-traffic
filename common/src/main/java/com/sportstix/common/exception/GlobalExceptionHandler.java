@@ -5,7 +5,6 @@ import com.sportstix.common.response.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -22,25 +21,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(errorCode, e.getMessage()));
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .reduce((a, b) -> a + ", " + b)
-                .orElse("Validation failed");
-        log.warn("Validation error: {}", message);
-        return ResponseEntity
-                .badRequest()
-                .body(ApiResponse.error(ErrorCode.INVALID_INPUT, message));
-    }
-
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ApiResponse<Void>> handleBindException(BindException e) {
         String message = e.getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .reduce((a, b) -> a + ", " + b)
-                .orElse("Binding failed");
-        log.warn("Bind error: {}", message);
+                .orElse("Validation failed");
+        log.warn("Validation error: {}", message);
         return ResponseEntity
                 .badRequest()
                 .body(ApiResponse.error(ErrorCode.INVALID_INPUT, message));

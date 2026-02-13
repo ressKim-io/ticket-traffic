@@ -1,24 +1,30 @@
 package com.sportstix.common.event;
 
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GameEvent extends DomainEvent {
 
-    private final Long gameId;
-    private final int totalSeats;
+    public static final String TYPE_SEAT_INITIALIZED = "GAME_SEAT_INITIALIZED";
+    public static final String TYPE_INFO_UPDATED = "GAME_INFO_UPDATED";
 
-    private GameEvent(String eventType, Long gameId, int totalSeats) {
+    private Long gameId;
+    private Integer totalSeats;
+
+    private GameEvent(String eventType, Long gameId, Integer totalSeats) {
         super(eventType);
         this.gameId = gameId;
         this.totalSeats = totalSeats;
     }
 
     public static GameEvent seatInitialized(Long gameId, int totalSeats) {
-        return new GameEvent("GAME_SEAT_INITIALIZED", gameId, totalSeats);
+        return new GameEvent(TYPE_SEAT_INITIALIZED, gameId, totalSeats);
     }
 
     public static GameEvent infoUpdated(Long gameId) {
-        return new GameEvent("GAME_INFO_UPDATED", gameId, 0);
+        return new GameEvent(TYPE_INFO_UPDATED, gameId, null);
     }
 }
