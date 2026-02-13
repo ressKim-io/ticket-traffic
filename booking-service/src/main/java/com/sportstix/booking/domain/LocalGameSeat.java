@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 @Table(name = "local_game_seats")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LocalGameSeat {
+public class LocalGameSeat implements Persistable<Long> {
 
     @Id
     private Long id;
@@ -44,6 +45,9 @@ public class LocalGameSeat {
     @Column(nullable = false)
     private LocalDateTime syncedAt;
 
+    @Transient
+    private boolean isNew = true;
+
     public LocalGameSeat(Long id, Long gameId, Long seatId, Long sectionId,
                          BigDecimal price, String rowName, Integer seatNumber) {
         this.id = id;
@@ -57,17 +61,39 @@ public class LocalGameSeat {
         this.syncedAt = LocalDateTime.now();
     }
 
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PrePersist
+    void markNotNew() {
+        this.isNew = false;
+    }
+
     public void hold() {
+        if (!"AVAILABLE".equals(this.status)) {
+            throw new IllegalStateException(
+                    "Cannot hold seat: current status=" + this.status + ", expected=AVAILABLE");
+        }
         this.status = "HELD";
         this.syncedAt = LocalDateTime.now();
     }
 
     public void reserve() {
+        if (!"HELD".equals(this.status)) {
+            throw new IllegalStateException(
+                    "Cannot reserve seat: current status=" + this.status + ", expected=HELD");
+        }
         this.status = "RESERVED";
         this.syncedAt = LocalDateTime.now();
     }
 
     public void release() {
+        if ("AVAILABLE".equals(this.status)) {
+            return; // already available, idempotent
+        }
         this.status = "AVAILABLE";
         this.syncedAt = LocalDateTime.now();
     }

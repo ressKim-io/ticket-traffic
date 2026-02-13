@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 
@@ -15,7 +16,7 @@ import java.time.LocalDateTime;
 @Table(name = "local_games")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LocalGame {
+public class LocalGame implements Persistable<Long> {
 
     @Id
     private Long id;
@@ -41,6 +42,9 @@ public class LocalGame {
     @Column(nullable = false)
     private LocalDateTime syncedAt;
 
+    @Transient
+    private boolean isNew = true;
+
     public LocalGame(Long id, String homeTeam, String awayTeam,
                      LocalDateTime gameDate, LocalDateTime ticketOpenAt,
                      String status, Integer maxTicketsPerUser) {
@@ -52,6 +56,17 @@ public class LocalGame {
         this.status = status;
         this.maxTicketsPerUser = maxTicketsPerUser;
         this.syncedAt = LocalDateTime.now();
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PrePersist
+    void markNotNew() {
+        this.isNew = false;
     }
 
     public void updateFrom(String homeTeam, String awayTeam,
