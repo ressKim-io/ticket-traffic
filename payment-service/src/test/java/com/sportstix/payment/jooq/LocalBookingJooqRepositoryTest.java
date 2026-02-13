@@ -1,8 +1,6 @@
 package com.sportstix.payment.jooq;
 
 import org.jooq.DSLContext;
-import org.jooq.Record;
-import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.AfterAll;
@@ -18,9 +16,6 @@ import java.time.LocalDateTime;
 import static com.sportstix.payment.jooq.generated.Tables.LOCAL_BOOKINGS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Unit test for LocalBookingJooqRepository using in-memory H2 + jOOQ.
- */
 class LocalBookingJooqRepositoryTest {
 
     private static Connection connection;
@@ -46,15 +41,12 @@ class LocalBookingJooqRepositoryTest {
 
     @AfterAll
     static void closeDb() throws SQLException {
-        if (connection != null) {
-            connection.close();
-        }
+        if (connection != null) connection.close();
     }
 
     @BeforeEach
     void setUp() {
         dsl = DSL.using(connection, SQLDialect.H2);
-
         dsl.deleteFrom(LOCAL_BOOKINGS).execute();
 
         dsl.insertInto(LOCAL_BOOKINGS)
@@ -78,14 +70,14 @@ class LocalBookingJooqRepositoryTest {
 
     @Test
     void findByIdForUpdate_returnsMatchingBooking() {
-        Record result = repository.findByIdForUpdate(1L, "PENDING");
+        var result = repository.findByIdForUpdate(1L, "PENDING");
         assertThat(result).isNotNull();
         assertThat(result.get(LOCAL_BOOKINGS.ID)).isEqualTo(1L);
     }
 
     @Test
     void findByIdForUpdate_wrongStatus_returnsNull() {
-        Record result = repository.findByIdForUpdate(1L, "CONFIRMED");
+        var result = repository.findByIdForUpdate(1L, "CONFIRMED");
         assertThat(result).isNull();
     }
 
@@ -103,33 +95,16 @@ class LocalBookingJooqRepositoryTest {
 
     @Test
     void updateStatus_notFound_returnsZero() {
-        int updated = repository.updateStatus(999L, "CONFIRMED");
-        assertThat(updated).isEqualTo(0);
+        assertThat(repository.updateStatus(999L, "CONFIRMED")).isEqualTo(0);
     }
 
     @Test
     void countByUserAndGameAndStatus_countsCorrectly() {
-        long count = repository.countByUserAndGameAndStatus(100L, 10L, "PENDING");
-        assertThat(count).isEqualTo(1);
+        assertThat(repository.countByUserAndGameAndStatus(100L, 10L, "PENDING")).isEqualTo(1);
     }
 
     @Test
     void countByUserAndGameAndStatus_noMatch_returnsZero() {
-        long count = repository.countByUserAndGameAndStatus(100L, 10L, "CANCELLED");
-        assertThat(count).isEqualTo(0);
-    }
-
-    @Test
-    void findByUserId_returnsUserBookings() {
-        Result<Record> result = repository.findByUserId(100L);
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).get(LOCAL_BOOKINGS.ID)).isEqualTo(2L);
-        assertThat(result.get(1).get(LOCAL_BOOKINGS.ID)).isEqualTo(1L);
-    }
-
-    @Test
-    void findByUserId_noBookings_returnsEmpty() {
-        Result<Record> result = repository.findByUserId(999L);
-        assertThat(result).isEmpty();
+        assertThat(repository.countByUserAndGameAndStatus(100L, 10L, "CANCELLED")).isEqualTo(0);
     }
 }

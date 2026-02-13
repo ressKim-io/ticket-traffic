@@ -1,7 +1,7 @@
 package com.sportstix.booking.jooq;
 
 import org.jooq.DSLContext;
-import org.jooq.Record;
+import org.jooq.Record4;
 import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
@@ -10,20 +10,17 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+import static com.sportstix.booking.jooq.LocalGameSeatJooqRepository.*;
 import static com.sportstix.booking.jooq.generated.Tables.LOCAL_GAMES;
 import static com.sportstix.booking.jooq.generated.Tables.LOCAL_GAME_SEATS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Unit test for LocalGameSeatJooqRepository using in-memory H2 + jOOQ.
- */
 class LocalGameSeatJooqRepositoryTest {
 
     private static Connection connection;
@@ -65,19 +62,15 @@ class LocalGameSeatJooqRepositoryTest {
 
     @AfterAll
     static void closeDb() throws SQLException {
-        if (connection != null) {
-            connection.close();
-        }
+        if (connection != null) connection.close();
     }
 
     @BeforeEach
     void setUp() {
         dsl = DSL.using(connection, SQLDialect.H2);
-
         dsl.deleteFrom(LOCAL_GAME_SEATS).execute();
         dsl.deleteFrom(LOCAL_GAMES).execute();
 
-        // Insert test game
         dsl.insertInto(LOCAL_GAMES)
                 .set(LOCAL_GAMES.ID, 1L)
                 .set(LOCAL_GAMES.HOME_TEAM, "Home")
@@ -89,7 +82,6 @@ class LocalGameSeatJooqRepositoryTest {
                 .set(LOCAL_GAMES.SYNCED_AT, LocalDateTime.now())
                 .execute();
 
-        // Insert 5 test seats: seats 1-3 in section 1, seats 4-5 in section 2
         for (int i = 1; i <= 5; i++) {
             dsl.insertInto(LOCAL_GAME_SEATS)
                     .set(LOCAL_GAME_SEATS.ID, (long) i)
@@ -97,7 +89,7 @@ class LocalGameSeatJooqRepositoryTest {
                     .set(LOCAL_GAME_SEATS.SEAT_ID, (long) (100 + i))
                     .set(LOCAL_GAME_SEATS.SECTION_ID, i <= 3 ? 1L : 2L)
                     .set(LOCAL_GAME_SEATS.PRICE, 50000L)
-                    .set(LOCAL_GAME_SEATS.STATUS, "AVAILABLE")
+                    .set(LOCAL_GAME_SEATS.STATUS, AVAILABLE)
                     .set(LOCAL_GAME_SEATS.ROW_NAME, "A")
                     .set(LOCAL_GAME_SEATS.SEAT_NUMBER, i)
                     .set(LOCAL_GAME_SEATS.SYNCED_AT, LocalDateTime.now())
@@ -109,82 +101,98 @@ class LocalGameSeatJooqRepositoryTest {
 
     @Test
     void findByIdForUpdate_returnsMatchingSeat() {
-        Record result = repository.findByIdForUpdate(1L, "AVAILABLE");
+        var result = repository.findByIdForUpdate(1L, AVAILABLE);
         assertThat(result).isNotNull();
         assertThat(result.get(LOCAL_GAME_SEATS.ID)).isEqualTo(1L);
     }
 
     @Test
     void findByIdForUpdate_wrongStatus_returnsNull() {
-        Record result = repository.findByIdForUpdate(1L, "HELD");
+        var result = repository.findByIdForUpdate(1L, HELD);
         assertThat(result).isNull();
     }
 
     @Test
-    void bulkUpdateStatus_updatesMultipleSeats() {
-        int updated = repository.bulkUpdateStatus(Set.of(1L, 2L, 3L), "HELD");
+    void bulkUpdateStatus_updatesMatchingSeats() {
+        int updated = repository.bulkUpdateStatus(Set.of(1L, 2L, 3L), AVAILABLE, HELD);
         assertThat(updated).isEqualTo(3);
 
         String status = dsl.select(LOCAL_GAME_SEATS.STATUS)
                 .from(LOCAL_GAME_SEATS)
                 .where(LOCAL_GAME_SEATS.ID.eq(1L))
                 .fetchOne(LOCAL_GAME_SEATS.STATUS);
-        assertThat(status).isEqualTo("HELD");
+        assertThat(status).isEqualTo(HELD);
+    }
+
+    @Test
+    void bulkUpdateStatus_wrongCurrentStatus_updatesNothing() {
+        int updated = repository.bulkUpdateStatus(Set.of(1L, 2L), HELD, RESERVED);
+        assertThat(updated).isEqualTo(0);
     }
 
     @Test
     void bulkUpdateStatus_emptyCollection_returnsZero() {
-        int updated = repository.bulkUpdateStatus(Set.of(), "HELD");
+        int updated = repository.bulkUpdateStatus(Set.of(), AVAILABLE, HELD);
         assertThat(updated).isEqualTo(0);
     }
 
     @Test
     void findAvailableByGameAndSection_returnsFilteredSeats() {
-        Result<Record> result = repository.findAvailableByGameAndSection(1L, 1L);
+        var result = repository.findAvailableByGameAndSection(1L, 1L, 100, 0);
         assertThat(result).hasSize(3);
     }
 
     @Test
-    void countAvailableByGame_countsCorrectly() {
-        long count = repository.countAvailableByGame(1L);
-        assertThat(count).isEqualTo(5);
+    void findAvailableByGameAndSection_withPagination() {
+        var page1 = repository.findAvailableByGameAndSection(1L, 1L, 2, 0);
+        var page2 = repository.findAvailableByGameAndSection(1L, 1L, 2, 2);
+        assertThat(page1).hasSize(2);
+        assertThat(page2).hasSize(1);
+    }
 
-        repository.bulkUpdateStatus(Set.of(1L, 2L), "HELD");
-        count = repository.countAvailableByGame(1L);
-        assertThat(count).isEqualTo(3);
+    @Test
+    void countAvailableByGame_countsCorrectly() {
+        assertThat(repository.countAvailableByGame(1L)).isEqualTo(5);
+
+        repository.bulkUpdateStatus(Set.of(1L, 2L), AVAILABLE, HELD);
+        assertThat(repository.countAvailableByGame(1L)).isEqualTo(3);
     }
 
     @Test
     void countAvailableByGameAndSection_countsPerSection() {
-        long section1Count = repository.countAvailableByGameAndSection(1L, 1L);
-        long section2Count = repository.countAvailableByGameAndSection(1L, 2L);
-        assertThat(section1Count).isEqualTo(3);
-        assertThat(section2Count).isEqualTo(2);
+        assertThat(repository.countAvailableByGameAndSection(1L, 1L)).isEqualTo(3);
+        assertThat(repository.countAvailableByGameAndSection(1L, 2L)).isEqualTo(2);
     }
 
     @Test
     void getSeatPrice_returnsPrice() {
-        BigDecimal price = repository.getSeatPrice(1L);
-        assertThat(price).isEqualByComparingTo(BigDecimal.valueOf(50000));
+        Long price = repository.getSeatPrice(1L);
+        assertThat(price).isEqualTo(50000L);
     }
 
     @Test
     void getSeatPrice_notFound_returnsNull() {
-        BigDecimal price = repository.getSeatPrice(999L);
-        assertThat(price).isNull();
+        assertThat(repository.getSeatPrice(999L)).isNull();
     }
 
     @Test
     void findByIdsForUpdateSkipLocked_returnsMatchingSeats() {
-        Result<Record> result = repository.findByIdsForUpdateSkipLocked(
-                Set.of(1L, 2L, 3L), "AVAILABLE");
+        var result = repository.findByIdsForUpdateSkipLocked(Set.of(1L, 2L, 3L), AVAILABLE);
         assertThat(result).hasSize(3);
     }
 
     @Test
     void findByIdsForUpdateSkipLocked_emptyIds_returnsEmpty() {
-        Result<Record> result = repository.findByIdsForUpdateSkipLocked(
-                Set.of(), "AVAILABLE");
+        var result = repository.findByIdsForUpdateSkipLocked(Set.of(), AVAILABLE);
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void bulkUpdateStatus_partialMatch_updatesOnlyMatching() {
+        // Hold seats 1,2 first
+        repository.bulkUpdateStatus(Set.of(1L, 2L), AVAILABLE, HELD);
+        // Try to hold 2,3,4 - only 3,4 should match (2 is already HELD)
+        int updated = repository.bulkUpdateStatus(Set.of(2L, 3L, 4L), AVAILABLE, HELD);
+        assertThat(updated).isEqualTo(2);
     }
 }
