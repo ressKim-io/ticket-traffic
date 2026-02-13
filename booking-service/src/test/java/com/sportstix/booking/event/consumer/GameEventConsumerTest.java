@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class GameEventConsumerTest {
@@ -52,6 +53,7 @@ class GameEventConsumerTest {
         consumer.handleSeatInitialized(event);
 
         verify(localGameRepository).save(any(LocalGame.class));
+        verify(localGameSeatRepository).deleteByGameId(1L);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<LocalGameSeat>> seatCaptor = ArgumentCaptor.forClass(List.class);
         verify(localGameSeatRepository).saveAll(seatCaptor.capture());
@@ -74,6 +76,7 @@ class GameEventConsumerTest {
         consumer.handleSeatInitialized(event);
 
         verify(localGameRepository).save(existing);
+        verify(localGameSeatRepository).deleteByGameId(1L);
         assertThat(existing.getHomeTeam()).isEqualTo("New Home");
         assertThat(existing.getStatus()).isEqualTo("OPEN");
     }

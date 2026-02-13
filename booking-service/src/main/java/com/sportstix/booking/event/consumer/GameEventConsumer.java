@@ -48,6 +48,9 @@ public class GameEventConsumer {
                 ));
         localGameRepository.save(localGame);
 
+        // Delete existing seats before re-initialization (idempotency)
+        localGameSeatRepository.deleteByGameId(event.getGameId());
+
         // Batch insert seats
         if (event.getSeats() != null && !event.getSeats().isEmpty()) {
             List<LocalGameSeat> seats = new ArrayList<>();
