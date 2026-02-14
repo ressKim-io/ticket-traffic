@@ -82,45 +82,6 @@ spec:
         - port: 4317
           protocol: TCP
 ---
-# Gateway -> backend services (all service ports)
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-gateway-egress
-  namespace: sportstix
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: gateway
-  policyTypes:
-    - Egress
-  egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/part-of: sportstix
-      ports:
-        - port: 8081
-          protocol: TCP
-        - port: 8082
-          protocol: TCP
-        - port: 8083
-          protocol: TCP
-        - port: 8084
-          protocol: TCP
-        - port: 8085
-          protocol: TCP
-        - port: 8086
-          protocol: TCP
-    # Gateway needs Redis for rate limiting
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: redis
-      ports:
-        - port: 6379
-          protocol: TCP
----
 # Backend services -> PostgreSQL, Kafka, Redis (within namespace)
 # Applies to: auth, game, booking, payment, admin
 apiVersion: networking.k8s.io/v1

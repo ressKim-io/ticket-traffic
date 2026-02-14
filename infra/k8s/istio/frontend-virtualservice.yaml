@@ -1,0 +1,17 @@
+# Frontend routing via Istio IngressGateway
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: frontend-routes
+  namespace: sportstix
+spec:
+  hosts:
+    - "sportstix.io"
+  gateways:
+    - sportstix-gateway
+  http:
+    - route:
+        - destination:
+            host: frontend.sportstix.svc.cluster.local
+            port:
+              number: 3000

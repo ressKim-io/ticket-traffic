@@ -1,27 +1,11 @@
 # ServiceAccount-based access control for east-west traffic
-# Only gateway can call backend services directly
+# Istio IngressGateway calls backend services directly
 
-# Gateway: allow traffic from NGINX Ingress (external) and any source
+# Backend services: only accept traffic from Istio IngressGateway SA
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
-  name: allow-gateway-ingress
-  namespace: sportstix
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: gateway
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            namespaces: ["ingress-nginx", "sportstix"]
----
-# Backend services: only accept traffic from gateway SA
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-from-gateway
+  name: allow-from-ingressgateway
   namespace: sportstix
 spec:
   selector:
@@ -32,7 +16,7 @@ spec:
     - from:
         - source:
             principals:
-              - "cluster.local/ns/sportstix/sa/gateway-sa"
+              - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
     # Allow Prometheus scraping from observability namespace only
     - from:
         - source:
@@ -55,4 +39,5 @@ spec:
   rules:
     - from:
         - source:
-            namespaces: ["ingress-nginx", "sportstix"]
+            principals:
+              - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"

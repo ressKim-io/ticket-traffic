@@ -1,6 +1,6 @@
 # Istio installation configuration
 # Install with: istioctl install -f istio-operator.yaml
-# NGINX Ingress handles north-south, Istio handles east-west only
+# Istio IngressGateway handles north-south, sidecars handle east-west
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
@@ -20,10 +20,35 @@ spec:
     outboundTrafficPolicy:
       mode: REGISTRY_ONLY
   components:
-    # Disable Istio IngressGateway - NGINX Ingress handles north-south
+    # Istio IngressGateway handles north-south traffic (JWT, routing, rate limit)
     ingressGateways:
       - name: istio-ingressgateway
-        enabled: false
+        enabled: true
+        k8s:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          hpaSpec:
+            minReplicas: 2
+            maxReplicas: 6
+            metrics:
+              - type: Resource
+                resource:
+                  name: cpu
+                  targetAverageUtilization: 70
+          service:
+            type: LoadBalancer
+            ports:
+              - port: 80
+                targetPort: 8080
+                name: http2
+              - port: 443
+                targetPort: 8443
+                name: https
     egressGateways:
       - name: istio-egressgateway
         enabled: false

@@ -1,3 +1,6 @@
+# NGINX Ingress retained only for legacy/fallback
+# Primary traffic flows through Istio IngressGateway
+# Frontend can also be served via Istio (frontend-virtualservice.yaml)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -6,42 +9,16 @@ metadata:
   labels:
     app.kubernetes.io/part-of: sportstix
   annotations:
-    # NGINX Ingress Controller
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    # WebSocket support for queue/booking real-time updates
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    # Rate limiting at ingress level
-    nginx.ingress.kubernetes.io/limit-rps: "50"
-    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
-    # Request size limit
     nginx.ingress.kubernetes.io/proxy-body-size: "1m"
-    # CORS
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://sportstix.io"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, X-Request-ID"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
         - sportstix.io
-        - api.sportstix.io
       secretName: sportstix-tls
   rules:
-    # API traffic -> Gateway
-    - host: api.sportstix.io
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: gateway
-                port:
-                  number: 8080
-    # Frontend traffic
+    # Frontend traffic (fallback if Istio IngressGW is unavailable)
     - host: sportstix.io
       http:
         paths:

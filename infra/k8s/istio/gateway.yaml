@@ -1,0 +1,30 @@
+# Istio Gateway resource for north-south traffic
+# Replaces NGINX Ingress + Spring Cloud Gateway
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: sportstix-gateway
+  namespace: sportstix
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "api.sportstix.io"
+        - "sportstix.io"
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "api.sportstix.io"
+        - "sportstix.io"
+      tls:
+        mode: SIMPLE
+        credentialName: sportstix-tls

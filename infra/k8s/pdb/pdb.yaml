@@ -2,17 +2,6 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: gateway-pdb
-  namespace: sportstix
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: gateway
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
   name: queue-pdb
   namespace: sportstix
 spec:

@@ -1,29 +1,3 @@
-# Gateway - entry point, scales with request volume
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: gateway-hpa
-  namespace: sportstix
-  labels:
-    app.kubernetes.io/part-of: sportstix
-spec:
-  scaleTargetRef:
-    apiVersion: argoproj.io/v1alpha1
-    kind: Rollout
-    name: gateway
-  minReplicas: 2
-  maxReplicas: 6
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
----
 # Auth - scales with login/signup traffic
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

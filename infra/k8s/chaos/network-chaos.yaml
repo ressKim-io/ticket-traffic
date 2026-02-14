@@ -1,16 +1,16 @@
-# NetworkChaos: gateway to backend latency injection
+# NetworkChaos: backend service latency injection
 # Tests Istio outlier detection and circuit breaking
 # Validates: SLO latency budget, Istio retry policy, client timeout handling
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: gateway-backend-latency
+  name: backend-ingress-latency
   namespace: sportstix
   labels:
     app.kubernetes.io/part-of: sportstix
     chaos-mesh.org/experiment-type: network-delay
   annotations:
-    chaos-mesh.org/description: "Inject 200ms latency from gateway to backend services"
+    chaos-mesh.org/description: "Inject 200ms latency on backend services inbound traffic"
     chaos-mesh.org/expected-impact: "SLO latency budget consumption, Istio outlier ejection"
     chaos-mesh.org/rollback: "Experiment auto-recovers after duration expires"
 spec:
@@ -20,19 +20,12 @@ spec:
     namespaces:
       - sportstix
     labelSelectors:
-      app.kubernetes.io/name: gateway
+      sportstix.io/tier: backend
   delay:
     latency: "200ms"
     jitter: "50ms"
     correlation: "25"
-  direction: to
-  target:
-    selector:
-      namespaces:
-        - sportstix
-      labelSelectors:
-        sportstix.io/tier: backend
-    mode: all
+  direction: from
   duration: "120s"
 ---
 # NetworkChaos: booking egress latency (simulates DB slowness)
