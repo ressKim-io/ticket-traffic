@@ -25,24 +25,24 @@ function StatCard({
 
 function DashboardContent() {
   const {
-    data: dashData,
+    data: dashboard,
     isLoading: dashLoading,
     isError: dashError,
     error: dashErr,
   } = useDashboard();
   const {
-    data: gamesData,
+    data: gameStats = [],
     isLoading: gamesLoading,
     isError: gamesError,
     error: gamesErr,
   } = useGameStats();
 
-  const dashboard = dashData?.data;
-  const gameStats = gamesData?.data ?? [];
-
   useEffect(() => {
-    document.title = "Admin Dashboard | SportsTix";
-  }, []);
+    const total = dashboard?.totalBookings ?? 0;
+    document.title = total > 0
+      ? `(${total.toLocaleString()}) Admin Dashboard | SportsTix`
+      : "Admin Dashboard | SportsTix";
+  }, [dashboard?.totalBookings]);
 
   if (dashLoading || gamesLoading) {
     return (
@@ -51,7 +51,10 @@ function DashboardContent() {
         role="status"
         aria-live="polite"
       >
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"
+          aria-hidden="true"
+        />
         <span className="sr-only">Loading dashboard...</span>
       </div>
     );
@@ -70,8 +73,10 @@ function DashboardContent() {
     );
   }
 
+  if (!dashboard) return null;
+
   const conversionRate =
-    dashboard && dashboard.totalBookings > 0
+    dashboard.totalBookings > 0
       ? ((dashboard.confirmedBookings / dashboard.totalBookings) * 100).toFixed(
           1
         )
@@ -83,20 +88,20 @@ function DashboardContent() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total Bookings"
-          value={dashboard?.totalBookings.toLocaleString() ?? "0"}
+          value={dashboard.totalBookings.toLocaleString()}
         />
         <StatCard
           label="Confirmed"
-          value={dashboard?.confirmedBookings.toLocaleString() ?? "0"}
+          value={dashboard.confirmedBookings.toLocaleString()}
           sub={`${conversionRate}% conversion`}
         />
         <StatCard
           label="Total Revenue"
-          value={`₩${(dashboard?.totalRevenue ?? 0).toLocaleString()}`}
+          value={`₩${dashboard.totalRevenue.toLocaleString()}`}
         />
         <StatCard
           label="Total Games"
-          value={dashboard?.totalGames.toLocaleString() ?? "0"}
+          value={dashboard.totalGames.toLocaleString()}
         />
       </div>
 

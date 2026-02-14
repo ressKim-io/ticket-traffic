@@ -11,9 +11,9 @@ export function useDashboard() {
       const { data } = await apiClient.get<ApiResponse<DashboardResponse>>(
         "/admin/dashboard"
       );
-      return data;
+      return data.data!;
     },
-    refetchInterval: 30000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -24,8 +24,8 @@ export function useGameStats() {
       const { data } = await apiClient.get<
         ApiResponse<GameStatsResponse[]>
       >("/admin/games/stats");
-      return data;
+      return data.data ?? [];
     },
-    refetchInterval: 30000,
+    refetchInterval: 30_000,
   });
 }
