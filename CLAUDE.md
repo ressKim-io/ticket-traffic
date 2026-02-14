@@ -222,6 +222,13 @@ com.sportstix.{service}/
 - `/k8s-autoscaling` - HPA, VPA configuration
 - `/observability` - Logging, metrics (RED Method)
 - `/load-testing` - K6/Gatling load test
+- `/nextjs-app-router` - Next.js 14 App Router (Server/Client Components, Streaming)
+- `/react-components` - React 19 patterns (useActionState, useOptimistic, WebSocket)
+- `/zustand-state` - Zustand state management with Next.js 14
+- `/tanstack-query` - TanStack Query (prefetch, hydration, mutation)
+- `/tailwind-patterns` - Tailwind CSS + CVA component variants
+- `/frontend-testing` - Vitest + React Testing Library + Playwright
+- `/frontend-review` - Frontend code review checklist
 
 ## Agents
 - `@java-expert` - Java 21 + Spring Boot 3.3 patterns
@@ -235,6 +242,7 @@ com.sportstix.{service}/
 - `@load-tester` - Performance testing
 - `@k8s-troubleshooter` - Kubernetes debugging
 - `@ci-optimizer` - CI/CD pipeline optimization
+- `@frontend-expert` - Next.js 14 + React 19, Zustand, TanStack Query, Tailwind
 
 ## Design Documents (Reference)
 All design documents are in `tmp/` directory:
