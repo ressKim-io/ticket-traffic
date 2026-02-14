@@ -1,11 +1,5 @@
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
-FROM base AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --only=production
-
 # Build the application
 FROM base AS builder
 WORKDIR /app

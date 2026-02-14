@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { User } from "@/types";
 
 interface AuthState {
@@ -7,6 +7,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  hydrated: boolean;
 
   setTokens: (accessToken: string, refreshToken: string) => void;
   setUser: (user: User) => void;
@@ -20,6 +21,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      hydrated: false,
 
       setTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken, isAuthenticated: true }),
@@ -36,10 +38,13 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "sportstix-auth",
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
       }),
+      onRehydrateStorage: () => () => {
+        useAuthStore.setState({ hydrated: true });
+      },
     }
   )
 );

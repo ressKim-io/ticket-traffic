@@ -24,6 +24,29 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Singleton refresh promise to prevent race conditions
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = useAuthStore.getState().refreshToken;
+  if (!refreshToken) {
+    throw new Error("No refresh token");
+  }
+
+  const { data } = await axios.post<
+    ApiResponse<{ accessToken: string; refreshToken: string }>
+  >(`${API_BASE_URL}/api/v1/auth/refresh`, { refreshToken });
+
+  if (data.success && data.data) {
+    useAuthStore
+      .getState()
+      .setTokens(data.data.accessToken, data.data.refreshToken);
+    return data.data.accessToken;
+  }
+
+  throw new Error("Refresh failed");
+}
+
 // Response interceptor: handle token refresh on 401
 apiClient.interceptors.response.use(
   (response) => response,
@@ -35,28 +58,23 @@ apiClient.interceptors.response.use(
       originalRequest &&
       !originalRequest.headers["X-Retry"]
     ) {
-      const refreshToken = useAuthStore.getState().refreshToken;
+      if (!refreshPromise) {
+        refreshPromise = refreshAccessToken().finally(() => {
+          refreshPromise = null;
+        });
+      }
 
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post<
-            ApiResponse<{ accessToken: string; refreshToken: string }>
-          >(`${API_BASE_URL}/api/v1/auth/refresh`, { refreshToken });
-
-          if (data.success && data.data) {
-            useAuthStore
-              .getState()
-              .setTokens(data.data.accessToken, data.data.refreshToken);
-
-            originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
-            originalRequest.headers["X-Retry"] = "true";
-            return apiClient(originalRequest);
-          }
-        } catch {
-          useAuthStore.getState().logout();
-        }
-      } else {
+      try {
+        const newAccessToken = await refreshPromise;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        originalRequest.headers["X-Retry"] = "true";
+        return apiClient(originalRequest);
+      } catch {
         useAuthStore.getState().logout();
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+        return Promise.reject(error);
       }
     }
 

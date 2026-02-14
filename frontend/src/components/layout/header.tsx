@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuthStore, useUIStore } from "@/stores";
 
 export function Header() {
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user, logout, hydrated } = useAuthStore();
   const { isMobileMenuOpen, toggleMobileMenu, setMobileMenuOpen } =
     useUIStore();
 
@@ -24,7 +24,7 @@ export function Header() {
           >
             Games
           </Link>
-          {isAuthenticated ? (
+          {hydrated && isAuthenticated ? (
             <>
               <Link
                 href="/my"
@@ -101,7 +101,7 @@ export function Header() {
             >
               Games
             </Link>
-            {isAuthenticated ? (
+            {hydrated && isAuthenticated ? (
               <>
                 <Link
                   href="/my"
