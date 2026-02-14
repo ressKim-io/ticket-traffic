@@ -3,6 +3,7 @@ package com.sportstix.payment.event.consumer;
 import com.sportstix.common.event.BookingEvent;
 import com.sportstix.common.event.Topics;
 import com.sportstix.payment.domain.LocalBooking;
+import com.sportstix.payment.event.IdempotencyService;
 import com.sportstix.payment.repository.LocalBookingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,17 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingEventConsumer {
 
     private final LocalBookingRepository localBookingRepository;
+    private final IdempotencyService idempotencyService;
 
     @KafkaListener(topics = Topics.BOOKING_CREATED, groupId = "payment-service")
     @Transactional
     public void handleBookingCreated(BookingEvent event) {
-        log.info("Received booking-created event: bookingId={}, userId={}, gameId={}",
-                event.getBookingId(), event.getUserId(), event.getGameId());
-
-        if (localBookingRepository.existsById(event.getBookingId())) {
-            log.warn("Duplicate booking-created event ignored: bookingId={}", event.getBookingId());
+        if (idempotencyService.isDuplicate(event.getEventId(), Topics.BOOKING_CREATED)) {
+            log.debug("Duplicate booking-created event skipped: eventId={}", event.getEventId());
             return;
         }
+
+        log.info("Received booking-created event: bookingId={}, userId={}, gameId={}",
+                event.getBookingId(), event.getUserId(), event.getGameId());
 
         LocalBooking localBooking = new LocalBooking(
                 event.getBookingId(),
@@ -39,12 +41,18 @@ public class BookingEventConsumer {
                 event.getTotalPrice()
         );
         localBookingRepository.save(localBooking);
+        idempotencyService.markProcessed(event.getEventId(), Topics.BOOKING_CREATED);
         log.info("Created local booking replica: bookingId={}", event.getBookingId());
     }
 
     @KafkaListener(topics = Topics.BOOKING_CONFIRMED, groupId = "payment-service")
     @Transactional
     public void handleBookingConfirmed(BookingEvent event) {
+        if (idempotencyService.isDuplicate(event.getEventId(), Topics.BOOKING_CONFIRMED)) {
+            log.debug("Duplicate booking-confirmed event skipped: eventId={}", event.getEventId());
+            return;
+        }
+
         log.info("Received booking-confirmed event: bookingId={}", event.getBookingId());
 
         localBookingRepository.findById(event.getBookingId())
@@ -56,11 +64,17 @@ public class BookingEventConsumer {
                         () -> log.warn("Local booking not found for confirmed event: bookingId={}",
                                 event.getBookingId())
                 );
+        idempotencyService.markProcessed(event.getEventId(), Topics.BOOKING_CONFIRMED);
     }
 
     @KafkaListener(topics = Topics.BOOKING_CANCELLED, groupId = "payment-service")
     @Transactional
     public void handleBookingCancelled(BookingEvent event) {
+        if (idempotencyService.isDuplicate(event.getEventId(), Topics.BOOKING_CANCELLED)) {
+            log.debug("Duplicate booking-cancelled event skipped: eventId={}", event.getEventId());
+            return;
+        }
+
         log.info("Received booking-cancelled event: bookingId={}", event.getBookingId());
 
         localBookingRepository.findById(event.getBookingId())
@@ -72,5 +86,6 @@ public class BookingEventConsumer {
                         () -> log.warn("Local booking not found for cancelled event: bookingId={}",
                                 event.getBookingId())
                 );
+        idempotencyService.markProcessed(event.getEventId(), Topics.BOOKING_CANCELLED);
     }
 }
