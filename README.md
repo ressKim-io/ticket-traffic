@@ -10,7 +10,11 @@ MSA Event-Driven sports ticketing system designed for high-concurrency seat book
 | Database | PostgreSQL 16 (per-service schema), Redis 7 |
 | Messaging | Apache Kafka 3.9 (KRaft mode) |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS, Zustand |
-| Infra | Docker, Kubernetes (EKS), ArgoCD, Terraform |
+| Infra | Docker, Kubernetes (EKS), Terraform, ArgoCD |
+| Service Mesh | Istio (mTLS, traffic management, outlier detection) |
+| Delivery | Argo Rollouts (canary), KEDA (event-driven autoscaling) |
+| Observability | OpenTelemetry, Prometheus, Grafana, Tempo, Loki |
+| Resilience | Chaos Mesh, Velero (DR), Kyverno (policy), ESO (secrets) |
 | Testing | JUnit 5, Mockito, Testcontainers, K6 |
 
 ## Architecture
@@ -185,6 +189,72 @@ OpenAPI JSON: `http://localhost:{port}/v3/api-docs`
 
 Dead Letter Topics: `{topic}.DLT` with 3x exponential backoff retry (1s -> 2s -> 4s)
 
+## DevOps & Platform Engineering
+
+### Observability
+
+| Component | Tool | Description |
+|-----------|------|-------------|
+| Tracing | OpenTelemetry + Tempo | Zero-code Java agent auto-instrumentation, 72h retention |
+| Logging | Promtail + Loki | Structured JSON logging (logstash-logback-encoder), trace-log correlation |
+| Metrics | Prometheus + Grafana | SLO/SLI dashboards, burn-rate alerts |
+
+### Service Mesh (Istio)
+
+- **East-West mTLS**: STRICT PeerAuthentication for all services
+- **Traffic Management**: VirtualService + DestinationRule per service
+- **WebSocket Support**: `h2UpgradePolicy: DO_NOT_UPGRADE`, `timeout: 0s`
+- North-south traffic via NGINX Ingress (Istio IngressGateway disabled)
+
+### Progressive Delivery (Argo Rollouts)
+
+- **Canary Deployments**: gateway, booking services
+- **Traffic Splitting**: Istio VirtualService weight-based (20% -> 40% -> 60% -> 80%)
+- **Automated Analysis**: Prometheus AnalysisTemplates (success-rate >= 95%, p99 < 2s)
+- Auto-rollback on metric failure
+
+### Event-Driven Autoscaling (KEDA)
+
+| Service | Trigger | Threshold | Min/Max |
+|---------|---------|-----------|---------|
+| Booking | Kafka lag (booking.created, seat.held) + CPU | lag > 100, CPU > 65% | 2 / 8 |
+| Payment | Kafka lag (payment.completed, booking.confirmed) + CPU | lag > 50, CPU > 70% | 2 / 6 |
+| Queue | Redis list length + CPU + Memory | list > 500, CPU > 60% | 2 / 10 |
+
+### Disaster Recovery (Velero)
+
+- **Storage**: S3 (sportstix-velero-backups) + EBS volume snapshots
+- **Schedules**: Daily sportstix (02:00 KST), daily observability (03:00 KST), weekly full (Sunday)
+- **Retention**: Daily 7 days, weekly 30 days
+
+### Chaos Engineering (Chaos Mesh)
+
+| Experiment | Type | Target | Validates |
+|------------|------|--------|-----------|
+| booking-pod-kill | PodChaos | booking | PDB + KEDA recovery |
+| payment-pod-kill | PodChaos | payment | PDB recovery |
+| gateway-backend-latency | NetworkChaos | gateway -> backend | Istio outlier detection |
+| booking-egress-latency | NetworkChaos | booking -> DB | HikariCP timeout handling |
+| payment-egress-loss | NetworkChaos | payment -> Kafka | Kafka retry + idempotency |
+| resilience-validation | Workflow | Multi-step | End-to-end resilience (pod-kill -> health check -> latency -> health check) |
+
+### Security & Compliance
+
+| Area | Tool | Description |
+|------|------|-------------|
+| Supply Chain | Trivy + Syft + Cosign | Image/fs scan, CycloneDX SBOM, keyless signing (SLSA L2+) |
+| Policy-as-Code | Kyverno | 3 Enforce (privileged/root/host) + 4 Audit policies |
+| Secrets | External Secrets Operator | AWS Secrets Manager via IRSA |
+| SLO/SLI | Prometheus Recording Rules | 99.95% availability, 99.5% latency, 4-tier burn-rate alerts |
+
+### CI/CD Pipeline
+
+```
+PR Check:     Gradle build -> Trivy scan -> kubeconform validate
+Docker Build: Multi-stage build -> ECR push -> SBOM generate -> Cosign sign
+Deploy:       ArgoCD auto-sync -> Argo Rollouts canary -> Prometheus analysis
+```
+
 ## Project Structure
 
 ```
@@ -200,7 +270,16 @@ sportstix/
 ├── frontend/                # Next.js 14
 ├── infra/
 │   ├── docker-compose.yml   # PostgreSQL, Redis, Kafka
-│   ├── k8s/                 # Kubernetes manifests
+│   ├── argocd/              # ArgoCD Applications (Rollouts, KEDA, Velero, Chaos Mesh, ...)
+│   ├── k8s/
+│   │   ├── services/        # Deployments / Rollouts
+│   │   ├── istio/           # VirtualService, DestinationRule, PeerAuthentication
+│   │   ├── rollouts/        # AnalysisTemplates, canary VirtualServices
+│   │   ├── keda/            # ScaledObjects, TriggerAuthentication
+│   │   ├── velero/           # BackupStorageLocation, Schedules
+│   │   ├── chaos/           # PodChaos, NetworkChaos, Workflow, Schedule
+│   │   ├── monitoring/      # SLO recording/alerting rules, Grafana dashboards
+│   │   └── ...              # configmaps, hpa, pdb, network-policies, rbac
 │   └── terraform/           # AWS EKS infrastructure
 ├── k6/                      # Load test scenarios
 ├── build.gradle             # Root build config
