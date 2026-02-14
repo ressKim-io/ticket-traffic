@@ -166,7 +166,7 @@ function PaymentContent() {
 
       {/* Countdown Timer */}
       <div className="mt-6">
-        {!expired ? (
+        {!expired && booking.holdExpiresAt ? (
           <CountdownTimer
             expiresAt={booking.holdExpiresAt}
             onExpire={handleExpire}

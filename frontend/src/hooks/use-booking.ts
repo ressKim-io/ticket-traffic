@@ -5,6 +5,20 @@ import { apiClient } from "@/lib";
 import type { ApiResponse, BookingResponse } from "@/types";
 
 /**
+ * Fetch all bookings for the authenticated user.
+ */
+export function useUserBookings() {
+  return useQuery({
+    queryKey: ["bookings"],
+    queryFn: async () => {
+      const { data } =
+        await apiClient.get<ApiResponse<BookingResponse[]>>("/bookings");
+      return data;
+    },
+  });
+}
+
+/**
  * Fetch booking details by ID.
  */
 export function useBooking(
@@ -44,6 +58,7 @@ export function useConfirmBooking() {
     onSuccess: (res, bookingId) => {
       if (res.success) {
         queryClient.invalidateQueries({ queryKey: ["booking", bookingId] });
+        queryClient.invalidateQueries({ queryKey: ["bookings"] });
       }
     },
   });
@@ -65,6 +80,7 @@ export function useCancelBooking() {
     onSuccess: (res, bookingId) => {
       if (res.success) {
         queryClient.invalidateQueries({ queryKey: ["booking", bookingId] });
+        queryClient.invalidateQueries({ queryKey: ["bookings"] });
       }
     },
   });

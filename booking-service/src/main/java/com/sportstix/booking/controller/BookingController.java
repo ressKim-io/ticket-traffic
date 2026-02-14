@@ -10,8 +10,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/bookings")
+@RequestMapping("/api/v1/bookings")
 @RequiredArgsConstructor
 public class BookingController {
 
@@ -48,5 +50,14 @@ public class BookingController {
             @RequestHeader("X-User-Id") Long userId) {
         var booking = bookingService.getBooking(bookingId, userId);
         return ResponseEntity.ok(ApiResponse.ok(BookingResponse.from(booking)));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<BookingResponse>>> getUserBookings(
+            @RequestHeader("X-User-Id") Long userId) {
+        var bookings = bookingService.getUserBookings(userId).stream()
+                .map(BookingResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.ok(bookings));
     }
 }
