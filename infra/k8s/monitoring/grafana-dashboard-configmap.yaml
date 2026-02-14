@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sportstix-grafana-dashboard
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    grafana_dashboard: "1"
+data:
+  sportstix-overview.json: |
+    {
+      "dashboard": {
+        "title": "SportsTix Overview",
+        "uid": "sportstix-overview",
+        "tags": ["sportstix"],
+        "timezone": "Asia/Seoul",
+        "refresh": "10s",
+        "panels": [
+          {
+            "title": "Request Rate (RED - Rate)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+            "targets": [
+              {
+                "expr": "sum(rate(http_server_requests_seconds_count{namespace=\"sportstix\"}[5m])) by (application)",
+                "legendFormat": "{{application}}"
+              }
+            ]
+          },
+          {
+            "title": "Error Rate (RED - Errors)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+            "targets": [
+              {
+                "expr": "sum(rate(http_server_requests_seconds_count{namespace=\"sportstix\",status=~\"5..\"}[5m])) by (application) / sum(rate(http_server_requests_seconds_count{namespace=\"sportstix\"}[5m])) by (application) * 100",
+                "legendFormat": "{{application}} error %"
+              }
+            ]
+          },
+          {
+            "title": "P99 Latency (RED - Duration)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{namespace=\"sportstix\"}[5m])) by (le, application))",
+                "legendFormat": "{{application}} p99"
+              }
+            ]
+          },
+          {
+            "title": "JVM Heap Usage",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+            "targets": [
+              {
+                "expr": "jvm_memory_used_bytes{namespace=\"sportstix\",area=\"heap\"} / jvm_memory_max_bytes{namespace=\"sportstix\",area=\"heap\"} * 100",
+                "legendFormat": "{{application}} heap %"
+              }
+            ]
+          },
+          {
+            "title": "Active Kafka Consumers",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+            "targets": [
+              {
+                "expr": "sum(kafka_consumer_coordinator_assigned_partitions{namespace=\"sportstix\"}) by (application)",
+                "legendFormat": "{{application}}"
+              }
+            ]
+          },
+          {
+            "title": "Kafka Consumer Lag",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 18, "x": 6, "y": 16 },
+            "targets": [
+              {
+                "expr": "sum(kafka_consumer_fetch_manager_records_lag{namespace=\"sportstix\"}) by (application, topic)",
+                "legendFormat": "{{application}}/{{topic}}"
+              }
+            ]
+          },
+          {
+            "title": "Redis Connection Pool",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+            "targets": [
+              {
+                "expr": "lettuce_command_completion_seconds_count{namespace=\"sportstix\"}",
+                "legendFormat": "{{application}} commands"
+              }
+            ]
+          },
+          {
+            "title": "DB Connection Pool",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+            "targets": [
+              {
+                "expr": "hikaricp_connections_active{namespace=\"sportstix\"}",
+                "legendFormat": "{{application}} active"
+              },
+              {
+                "expr": "hikaricp_connections_pending{namespace=\"sportstix\"}",
+                "legendFormat": "{{application}} pending"
+              }
+            ]
+          }
+        ]
+      }
+    }
