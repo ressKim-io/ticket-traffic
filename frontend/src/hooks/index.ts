@@ -13,3 +13,4 @@ export {
   useConfirmBooking,
   useCancelBooking,
 } from "./use-booking";
+export { useDashboard, useGameStats } from "./use-admin";
