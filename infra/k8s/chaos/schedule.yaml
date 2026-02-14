@@ -1,0 +1,48 @@
+# Weekly PodChaos schedule - Wednesday 14:00 KST (05:00 UTC)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: weekly-pod-chaos
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+spec:
+  schedule: "0 5 * * 3"
+  type: PodChaos
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  podChaos:
+    action: pod-kill
+    mode: one
+    selector:
+      namespaces:
+        - sportstix
+      labelSelectors:
+        sportstix.io/tier: backend
+---
+# Weekly NetworkChaos schedule - Thursday 14:00 KST (05:00 UTC)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: weekly-network-chaos
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+spec:
+  schedule: "0 5 * * 4"
+  type: NetworkChaos
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  networkChaos:
+    action: delay
+    mode: one
+    selector:
+      namespaces:
+        - sportstix
+      labelSelectors:
+        sportstix.io/tier: backend
+    delay:
+      latency: "100ms"
+      jitter: "30ms"
+      correlation: "25"
+    duration: "120s"
