@@ -2,8 +2,6 @@ plugins {
     id 'java-library'
 }
 
-// common is a library, not a bootable application
-
 dependencies {
     api 'org.springframework.boot:spring-boot-starter-web'
     api 'org.springframework.boot:spring-boot-starter-data-jpa'

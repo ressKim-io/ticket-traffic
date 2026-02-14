@@ -33,6 +33,18 @@ spring:
       properties:
         spring.json.trusted.packages: com.sportstix.common.event
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: com.sportstix.admin.controller
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  show-actuator: false
+
 server:
   port: ${SERVER_PORT:8086}
 

@@ -36,6 +36,18 @@ spring:
 server:
   port: ${SERVER_PORT:8082}
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: com.sportstix.game.controller
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  show-actuator: false
+
 management:
   endpoints:
     web:

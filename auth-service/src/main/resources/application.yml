@@ -34,6 +34,18 @@ management:
     health:
       show-details: when_authorized
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: com.sportstix.auth.controller
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  show-actuator: false
+
 jwt:
   secret: ${JWT_SECRET:sportstix-default-secret-key-for-development-only-32bytes!}
   access-token-expiry: ${JWT_ACCESS_EXPIRY:3600000}
