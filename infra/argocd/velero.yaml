@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+spec:
+  project: sportstix
+  source:
+    repoURL: https://vmware-tanzu.github.io/helm-charts
+    chart: velero
+    targetRevision: 8.1.0
+    helm:
+      releaseName: velero
+      values: |
+        initContainers:
+          - name: velero-plugin-for-aws
+            image: velero/velero-plugin-for-aws:v1.11.0
+            volumeMounts:
+              - name: plugins
+                mountPath: /target
+        configuration:
+          backupStorageLocation: []
+          volumeSnapshotLocation: []
+        serviceAccount:
+          server:
+            annotations:
+              eks.amazonaws.com/role-arn: arn:aws:iam::role/velero-irsa
+        metrics:
+          enabled: true
+          serviceMonitor:
+            enabled: true
+            namespace: observability
+        schedules: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

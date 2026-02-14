@@ -9,6 +9,7 @@ spec:
     - 'https://github.com/ressKim-io/ticket-traffic.git'
     - 'https://argoproj.github.io/argo-helm'
     - 'https://kedacore.github.io/charts'
+    - 'https://vmware-tanzu.github.io/helm-charts'
   destinations:
     - namespace: sportstix
       server: https://kubernetes.default.svc
@@ -19,6 +20,8 @@ spec:
     - namespace: argo-rollouts
       server: https://kubernetes.default.svc
     - namespace: keda
+      server: https://kubernetes.default.svc
+    - namespace: velero
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ''

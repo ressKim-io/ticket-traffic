@@ -1,0 +1,14 @@
+# S3 backup storage for Velero
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: default
+  namespace: velero
+spec:
+  provider: aws
+  objectStorage:
+    bucket: sportstix-velero-backups
+    prefix: backups
+  config:
+    region: ap-northeast-2
+  default: true
