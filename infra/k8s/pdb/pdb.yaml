@@ -24,6 +24,28 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
+  name: game-pdb
+  namespace: sportstix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: game
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: admin-pdb
+  namespace: sportstix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: admin
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
   name: booking-pdb
   namespace: sportstix
 spec:

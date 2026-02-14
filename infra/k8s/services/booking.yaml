@@ -19,6 +19,19 @@ spec:
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: booking
     spec:
+      serviceAccountName: booking-sa
+      automountServiceAccountToken: false
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: booking
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
         - name: booking
           image: sportstix/booking-service:latest
@@ -35,6 +48,11 @@ spec:
           env:
             - name: JAVA_OPTS
               value: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests:
               cpu: 200m
@@ -60,6 +78,17 @@ spec:
               port: 8084
             failureThreshold: 30
             periodSeconds: 2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
