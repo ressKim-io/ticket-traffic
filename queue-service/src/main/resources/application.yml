@@ -32,6 +32,14 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: com.sportstix.queue.controller
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  show-actuator: false
 
 queue:
   batch-size: ${QUEUE_BATCH_SIZE:100}
