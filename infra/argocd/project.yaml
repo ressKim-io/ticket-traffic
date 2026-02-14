@@ -14,6 +14,7 @@ spec:
     - 'https://charts.jetstack.io'
     - 'https://falcosecurity.github.io/charts'
     - 'https://opencost.github.io/opencost-helm-chart'
+    - 'https://charts.fairwinds.com/stable'
   destinations:
     - namespace: sportstix
       server: https://kubernetes.default.svc
@@ -38,6 +39,8 @@ spec:
     - namespace: falco
       server: https://kubernetes.default.svc
     - namespace: opencost
+      server: https://kubernetes.default.svc
+    - namespace: goldilocks
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ''
