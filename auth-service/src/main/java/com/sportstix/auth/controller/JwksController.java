@@ -1,10 +1,13 @@
 package com.sportstix.auth.controller;
 
 import com.sportstix.auth.service.JwtTokenProvider;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.interfaces.RSAPublicKey;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -29,9 +32,11 @@ public class JwksController {
         this.jwksResponse = Map.of("keys", List.of(jwk));
     }
 
-    @GetMapping("/.well-known/jwks.json")
-    public Map<String, Object> jwks() {
-        return jwksResponse;
+    @GetMapping(value = "/.well-known/jwks.json", produces = "application/json")
+    public ResponseEntity<Map<String, Object>> jwks() {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
+                .body(jwksResponse);
     }
 
     private static String base64UrlEncode(byte[] bytes) {
