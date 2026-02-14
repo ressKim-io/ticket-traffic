@@ -23,8 +23,8 @@ data:
 
       memory_limiter:
         check_interval: 1s
-        limit_mib: 300
-        spike_limit_mib: 75
+        limit_mib: 250
+        spike_limit_mib: 60
 
       k8sattributes:
         auth_type: serviceAccount
@@ -52,6 +52,9 @@ data:
 
     service:
       extensions: [health_check]
+      telemetry:
+        metrics:
+          address: 0.0.0.0:8888
       pipelines:
         traces:
           receivers: [otlp]
@@ -91,6 +94,8 @@ spec:
               name: otlp-grpc
             - containerPort: 4318
               name: otlp-http
+            - containerPort: 8888
+              name: metrics
             - containerPort: 13133
               name: health
           securityContext:
@@ -147,6 +152,10 @@ spec:
       targetPort: otlp-http
       protocol: TCP
       name: otlp-http
+    - port: 8888
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
     - port: 13133
       targetPort: health
       protocol: TCP

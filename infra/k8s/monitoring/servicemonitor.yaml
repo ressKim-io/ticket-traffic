@@ -39,7 +39,7 @@ spec:
     matchNames:
       - observability
   endpoints:
-    - port: health
+    - port: metrics
       path: /metrics
       interval: 15s
       scrapeTimeout: 10s
