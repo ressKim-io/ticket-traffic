@@ -1,0 +1,22 @@
+# ServiceMonitor for all Java backend services
+# Requires: prometheus-operator (kube-prometheus-stack)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sportstix-backend
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: sportstix
+  namespaceSelector:
+    matchNames:
+      - sportstix
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s
+      scrapeTimeout: 10s
