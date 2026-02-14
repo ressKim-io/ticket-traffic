@@ -3,11 +3,11 @@ package com.sportstix.gateway.service;
 import com.sportstix.gateway.config.BotPreventionProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -41,9 +41,8 @@ public class CaptchaVerificationService {
 
         return webClient.post()
                 .uri(RECAPTCHA_VERIFY_URL)
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .bodyValue(String.format("secret=%s&response=%s",
-                        properties.getCaptcha().getSecretKey(), token))
+                .body(BodyInserters.fromFormData("secret", properties.getCaptcha().getSecretKey())
+                        .with("response", token))
                 .retrieve()
                 .bodyToMono(RecaptchaResponse.class)
                 .timeout(TIMEOUT)
@@ -57,7 +56,9 @@ public class CaptchaVerificationService {
                     return valid;
                 })
                 .onErrorResume(e -> {
-                    // Fail-open on timeout/error
+                    // Deliberate fail-open: availability over strictness.
+                    // CAPTCHA is a supplementary defense layer; rate limiting and
+                    // UA fingerprinting remain active even during Google API outages.
                     log.error("CAPTCHA verification error, allowing request: {}", e.getMessage());
                     return Mono.just(true);
                 });

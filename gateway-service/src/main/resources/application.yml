@@ -84,16 +84,16 @@ gateway:
     fingerprint:
       enabled: true
       blocked-user-agent-patterns:
-        - "(?i).*curl.*"
-        - "(?i).*wget.*"
-        - "(?i).*python-requests.*"
-        - "(?i).*python-urllib.*"
-        - "(?i).*selenium.*"
-        - "(?i).*phantomjs.*"
-        - "(?i).*headlesschrome.*"
-        - "(?i).*scrapy.*"
-        - "(?i).*httpclient.*"
-        - "(?i).*java/.*"
+        - "curl"
+        - "wget"
+        - "python-requests"
+        - "python-urllib"
+        - "selenium"
+        - "phantomjs"
+        - "headlesschrome"
+        - "scrapy"
+        - "httpclient"
+        - "java/"
 
     rate-limit:
       enabled: true

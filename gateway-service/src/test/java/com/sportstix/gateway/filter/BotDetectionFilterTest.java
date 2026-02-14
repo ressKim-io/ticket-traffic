@@ -27,9 +27,9 @@ class BotDetectionFilterTest {
         properties = new BotPreventionProperties();
         properties.getFingerprint().setEnabled(true);
         properties.getFingerprint().setBlockedUserAgentPatterns(List.of(
-                "(?i).*curl.*",
-                "(?i).*selenium.*",
-                "(?i).*python-requests.*"
+                "curl",
+                "selenium",
+                "python-requests"
         ));
         filter = new BotDetectionFilter(properties);
         chain = mock(GatewayFilterChain.class);

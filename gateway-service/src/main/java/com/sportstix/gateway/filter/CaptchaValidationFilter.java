@@ -38,7 +38,7 @@ public class CaptchaValidationFilter implements GlobalFilter, Ordered {
         String token = exchange.getRequest().getHeaders().getFirst(CAPTCHA_TOKEN_HEADER);
         if (token == null || token.isBlank()) {
             log.warn("Missing CAPTCHA token for protected path: {}", path);
-            return BotDetectionFilter.writeJsonResponse(exchange, HttpStatus.FORBIDDEN,
+            return RequestUtils.writeJsonResponse(exchange, HttpStatus.FORBIDDEN,
                     "CAPTCHA token required");
         }
 
@@ -46,7 +46,7 @@ public class CaptchaValidationFilter implements GlobalFilter, Ordered {
                 .flatMap(valid -> {
                     if (!valid) {
                         log.warn("CAPTCHA verification failed for path: {}", path);
-                        return BotDetectionFilter.writeJsonResponse(exchange, HttpStatus.FORBIDDEN,
+                        return RequestUtils.writeJsonResponse(exchange, HttpStatus.FORBIDDEN,
                                 "CAPTCHA verification failed");
                     }
                     return chain.filter(exchange);
