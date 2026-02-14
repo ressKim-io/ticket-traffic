@@ -1,0 +1,16 @@
+# JWT validation at Istio IngressGateway level
+# Replaces Gateway Service JwtAuthFilter
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  jwtRules:
+    - issuer: "sportstix"
+      jwksUri: "http://auth.sportstix.svc.cluster.local:8081/.well-known/jwks.json"
+      forwardOriginalToken: true
+      outputPayloadToHeader: "x-jwt-payload"
