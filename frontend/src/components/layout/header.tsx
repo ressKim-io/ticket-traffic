@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 import { useAuthStore, useUIStore } from "@/stores";
+import { useLogout } from "@/hooks";
 
 export function Header() {
-  const { isAuthenticated, user, logout, hydrated } = useAuthStore();
+  const { isAuthenticated, user, hydrated } = useAuthStore();
   const { isMobileMenuOpen, toggleMobileMenu, setMobileMenuOpen } =
     useUIStore();
+  const logoutMutation = useLogout();
+
+  function handleLogout() {
+    logoutMutation.mutate();
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
@@ -35,7 +41,7 @@ export function Header() {
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-500">{user?.name}</span>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
                 >
                   Logout
@@ -112,7 +118,7 @@ export function Header() {
                 </Link>
                 <button
                   onClick={() => {
-                    logout();
+                    handleLogout();
                     setMobileMenuOpen(false);
                   }}
                   className="block w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-700 hover:bg-gray-50"
