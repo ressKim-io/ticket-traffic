@@ -12,6 +12,7 @@ spec:
     - 'https://vmware-tanzu.github.io/helm-charts'
     - 'https://charts.chaos-mesh.org'
     - 'https://charts.jetstack.io'
+    - 'https://falcosecurity.github.io/charts'
   destinations:
     - namespace: sportstix
       server: https://kubernetes.default.svc
@@ -32,6 +33,8 @@ spec:
     - namespace: chaos-mesh
       server: https://kubernetes.default.svc
     - namespace: cert-manager
+      server: https://kubernetes.default.svc
+    - namespace: falco
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ''
