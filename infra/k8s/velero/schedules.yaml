@@ -1,0 +1,59 @@
+# Daily backup for sportstix namespace (02:00 KST = 17:00 UTC)
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: daily-sportstix
+  namespace: velero
+spec:
+  schedule: "0 17 * * *"
+  template:
+    includedNamespaces:
+      - sportstix
+    excludedResources:
+      - events
+      - pods
+    snapshotVolumes: false
+    storageLocation: default
+    ttl: 168h0m0s
+---
+# Daily backup for observability namespace (03:00 KST = 18:00 UTC)
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: daily-observability
+  namespace: velero
+spec:
+  schedule: "0 18 * * *"
+  template:
+    includedNamespaces:
+      - observability
+    excludedResources:
+      - events
+      - pods
+    snapshotVolumes: true
+    storageLocation: default
+    volumeSnapshotLocations:
+      - default
+    ttl: 168h0m0s
+---
+# Weekly full backup (Sunday 04:00 KST = 19:00 UTC Saturday)
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: weekly-full
+  namespace: velero
+spec:
+  schedule: "0 19 * * 6"
+  template:
+    includedNamespaces:
+      - sportstix
+      - observability
+      - istio-system
+    excludedResources:
+      - events
+      - pods
+    snapshotVolumes: true
+    storageLocation: default
+    volumeSnapshotLocations:
+      - default
+    ttl: 720h0m0s
