@@ -73,7 +73,7 @@ public class BookingService {
     public Booking confirmBooking(Long bookingId, Long userId) {
         log.info("Confirming booking: bookingId={}, userId={}", bookingId, userId);
 
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findByIdWithSeats(bookingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BOOKING_NOT_FOUND,
                         "Booking not found: " + bookingId));
 
@@ -112,7 +112,7 @@ public class BookingService {
     public Booking cancelBooking(Long bookingId, Long userId) {
         log.info("Cancelling booking: bookingId={}, userId={}", bookingId, userId);
 
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findByIdWithSeats(bookingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BOOKING_NOT_FOUND,
                         "Booking not found: " + bookingId));
 
@@ -144,7 +144,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public Booking getBooking(Long bookingId, Long userId) {
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findByIdWithSeats(bookingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BOOKING_NOT_FOUND,
                         "Booking not found: " + bookingId));
 
@@ -158,6 +158,6 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<Booking> getUserBookings(Long userId) {
-        return bookingRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        return bookingRepository.findByUserIdWithSeats(userId);
     }
 }
