@@ -19,6 +19,8 @@ spec:
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: auth
     spec:
+      serviceAccountName: auth-sa
+      automountServiceAccountToken: false
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname

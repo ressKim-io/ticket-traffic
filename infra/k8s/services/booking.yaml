@@ -19,6 +19,8 @@ spec:
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: booking
     spec:
+      serviceAccountName: booking-sa
+      automountServiceAccountToken: false
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
