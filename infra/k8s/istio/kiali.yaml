@@ -30,8 +30,7 @@ spec:
       tempo_config:
         org_id: "1"
         datasource_uid: tempo
-        url_format: ""
     prometheus:
-      url: ""
+      url: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
   server:
     web_root: /kiali

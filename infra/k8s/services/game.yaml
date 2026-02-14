@@ -20,6 +20,7 @@ spec:
         app.kubernetes.io/name: game
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: game
+        sportstix.io/tier: backend
     spec:
       serviceAccountName: game-sa
       automountServiceAccountToken: false

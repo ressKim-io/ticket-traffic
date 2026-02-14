@@ -25,18 +25,19 @@ metadata:
   namespace: sportstix
 spec:
   selector:
-    matchExpressions:
-      - key: app.kubernetes.io/name
-        operator: In
-        values: [auth, game, queue, booking, payment, admin]
+    matchLabels:
+      sportstix.io/tier: backend
   action: ALLOW
   rules:
     - from:
         - source:
             principals:
               - "cluster.local/ns/sportstix/sa/gateway-sa"
-    # Allow Prometheus scraping
-    - to:
+    # Allow Prometheus scraping from observability namespace only
+    - from:
+        - source:
+            namespaces: ["observability", "monitoring"]
+      to:
         - operation:
             paths: ["/actuator/health/*", "/actuator/prometheus", "/actuator/info"]
 ---

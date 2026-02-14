@@ -20,6 +20,7 @@ spec:
         app.kubernetes.io/name: admin
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: admin
+        sportstix.io/tier: backend
     spec:
       serviceAccountName: admin-sa
       automountServiceAccountToken: false
