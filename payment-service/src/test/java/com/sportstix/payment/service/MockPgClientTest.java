@@ -12,7 +12,7 @@ class MockPgClientTest {
 
     @Test
     void charge_returnsSuccessWithTransactionId() {
-        MockPgClient.PgResult result = mockPgClient.charge(1L, BigDecimal.valueOf(50000));
+        PgClient.PgResult result = mockPgClient.charge(1L, BigDecimal.valueOf(50000));
 
         assertThat(result.success()).isTrue();
         assertThat(result.transactionId()).startsWith("PG-");
@@ -21,7 +21,7 @@ class MockPgClientTest {
 
     @Test
     void refund_returnsSuccessWithRefundId() {
-        MockPgClient.PgResult result = mockPgClient.refund("PG-ABCD1234", BigDecimal.valueOf(50000));
+        PgClient.PgResult result = mockPgClient.refund("PG-ABCD1234", BigDecimal.valueOf(50000));
 
         assertThat(result.success()).isTrue();
         assertThat(result.transactionId()).startsWith("RF-");
@@ -30,7 +30,7 @@ class MockPgClientTest {
 
     @Test
     void pgResult_success_hasCorrectFields() {
-        MockPgClient.PgResult result = MockPgClient.PgResult.success("TXN-123");
+        PgClient.PgResult result = PgClient.PgResult.success("TXN-123");
 
         assertThat(result.success()).isTrue();
         assertThat(result.transactionId()).isEqualTo("TXN-123");
@@ -39,7 +39,7 @@ class MockPgClientTest {
 
     @Test
     void pgResult_failure_hasCorrectFields() {
-        MockPgClient.PgResult result = MockPgClient.PgResult.failure("Card declined");
+        PgClient.PgResult result = PgClient.PgResult.failure("Card declined");
 
         assertThat(result.success()).isFalse();
         assertThat(result.transactionId()).isNull();

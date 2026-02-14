@@ -9,10 +9,10 @@ import com.sportstix.payment.repository.LocalBookingRepository;
 import com.sportstix.payment.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,25 +32,28 @@ class PaymentServiceTest {
     @Mock
     private LocalBookingRepository localBookingRepository;
     @Mock
-    private MockPgClient mockPgClient;
+    private PgClient pgClient;
     @Mock
     private PaymentEventProducer paymentEventProducer;
 
     @InjectMocks
     private PaymentService paymentService;
 
+    private static final Long USER_ID = 100L;
+
     @Test
     void processPayment_success_completesPaymentAndPublishesEvent() {
         Long bookingId = 1L;
-        LocalBooking booking = new LocalBooking(bookingId, 100L, 10L, "PENDING", BigDecimal.valueOf(50000));
+        LocalBooking booking = new LocalBooking(bookingId, USER_ID, 10L, "PENDING", BigDecimal.valueOf(50000));
 
         when(paymentRepository.existsByBookingIdAndStatusIn(eq(bookingId), any())).thenReturn(false);
         when(localBookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(paymentRepository.saveAndFlush(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(mockPgClient.charge(eq(bookingId), any()))
-                .thenReturn(MockPgClient.PgResult.success("PG-ABCD1234"));
+        when(pgClient.charge(eq(bookingId), any()))
+                .thenReturn(PgClient.PgResult.success("PG-ABCD1234"));
 
-        Payment result = paymentService.processPayment(bookingId);
+        Payment result = paymentService.processPayment(bookingId, USER_ID);
 
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
         assertThat(result.getPgTransactionId()).isEqualTo("PG-ABCD1234");
@@ -61,15 +64,16 @@ class PaymentServiceTest {
     @Test
     void processPayment_pgFailure_failsPaymentAndPublishesEvent() {
         Long bookingId = 2L;
-        LocalBooking booking = new LocalBooking(bookingId, 100L, 10L, "PENDING", BigDecimal.valueOf(30000));
+        LocalBooking booking = new LocalBooking(bookingId, USER_ID, 10L, "PENDING", BigDecimal.valueOf(30000));
 
         when(paymentRepository.existsByBookingIdAndStatusIn(eq(bookingId), any())).thenReturn(false);
         when(localBookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(paymentRepository.saveAndFlush(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(mockPgClient.charge(eq(bookingId), any()))
-                .thenReturn(MockPgClient.PgResult.failure("Card declined"));
+        when(pgClient.charge(eq(bookingId), any()))
+                .thenReturn(PgClient.PgResult.failure("Card declined"));
 
-        Payment result = paymentService.processPayment(bookingId);
+        Payment result = paymentService.processPayment(bookingId, USER_ID);
 
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.FAILED);
         assertThat(result.getFailureReason()).isEqualTo("Card declined");
@@ -83,11 +87,26 @@ class PaymentServiceTest {
         when(paymentRepository.existsByBookingIdAndStatusIn(eq(bookingId),
                 eq(List.of(PaymentStatus.PENDING, PaymentStatus.COMPLETED)))).thenReturn(true);
 
-        assertThatThrownBy(() -> paymentService.processPayment(bookingId))
+        assertThatThrownBy(() -> paymentService.processPayment(bookingId, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Payment already exists");
 
-        verify(mockPgClient, never()).charge(any(), any());
+        verify(pgClient, never()).charge(any(), any());
+    }
+
+    @Test
+    void processPayment_raceConditionDuplicate_handlesDataIntegrityViolation() {
+        Long bookingId = 6L;
+        LocalBooking booking = new LocalBooking(bookingId, USER_ID, 10L, "PENDING", BigDecimal.valueOf(50000));
+
+        when(paymentRepository.existsByBookingIdAndStatusIn(eq(bookingId), any())).thenReturn(false);
+        when(localBookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(paymentRepository.saveAndFlush(any(Payment.class)))
+                .thenThrow(new DataIntegrityViolationException("Duplicate key"));
+
+        assertThatThrownBy(() -> paymentService.processPayment(bookingId, USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Payment already exists");
     }
 
     @Test
@@ -96,7 +115,7 @@ class PaymentServiceTest {
         when(paymentRepository.existsByBookingIdAndStatusIn(eq(bookingId), any())).thenReturn(false);
         when(localBookingRepository.findById(bookingId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> paymentService.processPayment(bookingId))
+        assertThatThrownBy(() -> paymentService.processPayment(bookingId, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Booking not found");
     }
@@ -104,53 +123,94 @@ class PaymentServiceTest {
     @Test
     void processPayment_noPriceOnBooking_throwsException() {
         Long bookingId = 5L;
-        LocalBooking booking = new LocalBooking(bookingId, 100L, 10L, "PENDING", null);
+        LocalBooking booking = new LocalBooking(bookingId, USER_ID, 10L, "PENDING", null);
 
         when(paymentRepository.existsByBookingIdAndStatusIn(eq(bookingId), any())).thenReturn(false);
         when(localBookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> paymentService.processPayment(bookingId))
+        assertThatThrownBy(() -> paymentService.processPayment(bookingId, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("total price not available");
     }
 
     @Test
+    void processPayment_wrongUser_throwsForbidden() {
+        Long bookingId = 7L;
+        Long wrongUserId = 999L;
+        LocalBooking booking = new LocalBooking(bookingId, USER_ID, 10L, "PENDING", BigDecimal.valueOf(50000));
+
+        when(paymentRepository.existsByBookingIdAndStatusIn(eq(bookingId), any())).thenReturn(false);
+        when(localBookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> paymentService.processPayment(bookingId, wrongUserId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("User does not own booking");
+    }
+
+    @Test
     void refundPayment_success_refundsAndPublishesEvent() {
         Payment payment = Payment.builder()
-                .bookingId(1L).userId(100L).amount(BigDecimal.valueOf(50000)).build();
+                .bookingId(1L).userId(USER_ID).amount(BigDecimal.valueOf(50000)).build();
         payment.complete("PG-ABCD1234");
 
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(mockPgClient.refund(eq("PG-ABCD1234"), any()))
-                .thenReturn(MockPgClient.PgResult.success("RF-XXXX1234"));
+        when(pgClient.refund(eq("PG-ABCD1234"), any()))
+                .thenReturn(PgClient.PgResult.success("RF-XXXX1234"));
 
-        Payment result = paymentService.refundPayment(1L);
+        Payment result = paymentService.refundPayment(1L, USER_ID);
 
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
         verify(paymentEventProducer).publishRefunded(any(Payment.class));
     }
 
     @Test
+    void refundPayment_notCompleted_throwsException() {
+        Payment payment = Payment.builder()
+                .bookingId(1L).userId(USER_ID).amount(BigDecimal.valueOf(50000)).build();
+
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() -> paymentService.refundPayment(1L, USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Cannot refund payment in status");
+
+        verify(pgClient, never()).refund(any(), any());
+    }
+
+    @Test
     void refundPayment_pgFails_throwsException() {
         Payment payment = Payment.builder()
-                .bookingId(1L).userId(100L).amount(BigDecimal.valueOf(50000)).build();
+                .bookingId(1L).userId(USER_ID).amount(BigDecimal.valueOf(50000)).build();
         payment.complete("PG-ABCD1234");
 
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
-        when(mockPgClient.refund(eq("PG-ABCD1234"), any()))
-                .thenReturn(MockPgClient.PgResult.failure("Refund timeout"));
+        when(pgClient.refund(eq("PG-ABCD1234"), any()))
+                .thenReturn(PgClient.PgResult.failure("Refund timeout"));
 
-        assertThatThrownBy(() -> paymentService.refundPayment(1L))
+        assertThatThrownBy(() -> paymentService.refundPayment(1L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Refund failed");
+    }
+
+    @Test
+    void refundPayment_wrongUser_throwsForbidden() {
+        Payment payment = Payment.builder()
+                .bookingId(1L).userId(USER_ID).amount(BigDecimal.valueOf(50000)).build();
+        payment.complete("PG-ABCD1234");
+
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() -> paymentService.refundPayment(1L, 999L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("User does not own payment");
     }
 
     @Test
     void refundPayment_notFound_throwsException() {
         when(paymentRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> paymentService.refundPayment(999L))
+        assertThatThrownBy(() -> paymentService.refundPayment(999L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Payment not found");
     }
@@ -158,7 +218,7 @@ class PaymentServiceTest {
     @Test
     void getPayment_found_returnsPayment() {
         Payment payment = Payment.builder()
-                .bookingId(1L).userId(100L).amount(BigDecimal.valueOf(50000)).build();
+                .bookingId(1L).userId(USER_ID).amount(BigDecimal.valueOf(50000)).build();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
 
         Payment result = paymentService.getPayment(1L);
@@ -169,7 +229,7 @@ class PaymentServiceTest {
     @Test
     void getPaymentByBookingId_found_returnsPayment() {
         Payment payment = Payment.builder()
-                .bookingId(1L).userId(100L).amount(BigDecimal.valueOf(50000)).build();
+                .bookingId(1L).userId(USER_ID).amount(BigDecimal.valueOf(50000)).build();
         when(paymentRepository.findByBookingId(1L)).thenReturn(Optional.of(payment));
 
         Payment result = paymentService.getPaymentByBookingId(1L);

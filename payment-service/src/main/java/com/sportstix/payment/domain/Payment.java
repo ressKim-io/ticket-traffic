@@ -1,6 +1,8 @@
 package com.sportstix.payment.domain;
 
 import com.sportstix.common.domain.BaseTimeEntity;
+import com.sportstix.common.exception.BusinessException;
+import com.sportstix.common.response.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -48,7 +50,7 @@ public class Payment extends BaseTimeEntity {
 
     public void complete(String pgTransactionId) {
         if (this.status != PaymentStatus.PENDING) {
-            throw new IllegalStateException(
+            throw new BusinessException(ErrorCode.PAYMENT_ALREADY_COMPLETED,
                     "Cannot complete payment: current status=" + this.status);
         }
         this.status = PaymentStatus.COMPLETED;
@@ -57,7 +59,7 @@ public class Payment extends BaseTimeEntity {
 
     public void fail(String reason) {
         if (this.status != PaymentStatus.PENDING) {
-            throw new IllegalStateException(
+            throw new BusinessException(ErrorCode.PAYMENT_FAILED,
                     "Cannot fail payment: current status=" + this.status);
         }
         this.status = PaymentStatus.FAILED;
@@ -66,7 +68,7 @@ public class Payment extends BaseTimeEntity {
 
     public void refund() {
         if (this.status != PaymentStatus.COMPLETED) {
-            throw new IllegalStateException(
+            throw new BusinessException(ErrorCode.REFUND_FAILED,
                     "Cannot refund payment: current status=" + this.status);
         }
         this.status = PaymentStatus.REFUNDED;

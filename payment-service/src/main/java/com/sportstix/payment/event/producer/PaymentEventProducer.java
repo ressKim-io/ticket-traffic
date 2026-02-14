@@ -16,49 +16,36 @@ public class PaymentEventProducer {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public void publishCompleted(Payment payment) {
-        PaymentEvent event = PaymentEvent.completed(
-                payment.getId(), payment.getBookingId(),
-                payment.getUserId(), payment.getAmount());
-        String key = String.valueOf(payment.getBookingId());
-        kafkaTemplate.send(Topics.PAYMENT_COMPLETED, key, event)
-                .whenComplete((result, ex) -> {
-                    if (ex != null) {
-                        log.error("Failed to publish payment-completed: paymentId={}", payment.getId(), ex);
-                    } else {
-                        log.info("Published payment-completed: paymentId={}, bookingId={}",
-                                payment.getId(), payment.getBookingId());
-                    }
-                });
+        publish(Topics.PAYMENT_COMPLETED,
+                PaymentEvent.completed(payment.getId(), payment.getBookingId(),
+                        payment.getUserId(), payment.getAmount()),
+                payment);
     }
 
     public void publishFailed(Payment payment) {
-        PaymentEvent event = PaymentEvent.failed(
-                payment.getId(), payment.getBookingId(),
-                payment.getUserId(), payment.getAmount());
-        String key = String.valueOf(payment.getBookingId());
-        kafkaTemplate.send(Topics.PAYMENT_FAILED, key, event)
-                .whenComplete((result, ex) -> {
-                    if (ex != null) {
-                        log.error("Failed to publish payment-failed: paymentId={}", payment.getId(), ex);
-                    } else {
-                        log.info("Published payment-failed: paymentId={}, bookingId={}",
-                                payment.getId(), payment.getBookingId());
-                    }
-                });
+        publish(Topics.PAYMENT_FAILED,
+                PaymentEvent.failed(payment.getId(), payment.getBookingId(),
+                        payment.getUserId(), payment.getAmount()),
+                payment);
     }
 
     public void publishRefunded(Payment payment) {
-        PaymentEvent event = PaymentEvent.refunded(
-                payment.getId(), payment.getBookingId(),
-                payment.getUserId(), payment.getAmount());
+        publish(Topics.PAYMENT_REFUNDED,
+                PaymentEvent.refunded(payment.getId(), payment.getBookingId(),
+                        payment.getUserId(), payment.getAmount()),
+                payment);
+    }
+
+    private void publish(String topic, PaymentEvent event, Payment payment) {
         String key = String.valueOf(payment.getBookingId());
-        kafkaTemplate.send(Topics.PAYMENT_REFUNDED, key, event)
+        kafkaTemplate.send(topic, key, event)
                 .whenComplete((result, ex) -> {
                     if (ex != null) {
-                        log.error("Failed to publish payment-refunded: paymentId={}", payment.getId(), ex);
+                        log.error("Failed to publish {}: paymentId={}",
+                                topic, payment.getId(), ex);
                     } else {
-                        log.info("Published payment-refunded: paymentId={}, bookingId={}",
-                                payment.getId(), payment.getBookingId());
+                        log.info("Published {}: paymentId={}, bookingId={}",
+                                topic, payment.getId(), payment.getBookingId());
                     }
                 });
     }

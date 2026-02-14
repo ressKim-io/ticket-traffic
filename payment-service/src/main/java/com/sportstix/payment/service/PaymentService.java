@@ -10,6 +10,7 @@ import com.sportstix.payment.repository.LocalBookingRepository;
 import com.sportstix.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,12 +23,12 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final LocalBookingRepository localBookingRepository;
-    private final MockPgClient mockPgClient;
+    private final PgClient pgClient;
     private final PaymentEventProducer paymentEventProducer;
 
     @Transactional
-    public Payment processPayment(Long bookingId) {
-        log.info("Processing payment for bookingId={}", bookingId);
+    public Payment processPayment(Long bookingId, Long userId) {
+        log.info("Processing payment for bookingId={}, userId={}", bookingId, userId);
 
         // Idempotency: reject if already completed or pending
         if (paymentRepository.existsByBookingIdAndStatusIn(bookingId,
@@ -41,6 +42,12 @@ public class PaymentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.BOOKING_NOT_FOUND,
                         "Booking not found: " + bookingId));
 
+        // Verify booking ownership
+        if (!booking.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN,
+                    "User does not own booking: " + bookingId);
+        }
+
         if (booking.getTotalPrice() == null) {
             throw new BusinessException(ErrorCode.PAYMENT_FAILED,
                     "Booking total price not available: " + bookingId);
@@ -49,13 +56,19 @@ public class PaymentService {
         // Create payment in PENDING status
         Payment payment = Payment.builder()
                 .bookingId(bookingId)
-                .userId(booking.getUserId())
+                .userId(userId)
                 .amount(booking.getTotalPrice())
                 .build();
-        payment = paymentRepository.save(payment);
 
-        // Call Mock PG
-        MockPgClient.PgResult pgResult = mockPgClient.charge(bookingId, payment.getAmount());
+        try {
+            payment = paymentRepository.saveAndFlush(payment);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.PAYMENT_ALREADY_COMPLETED,
+                    "Payment already exists for booking: " + bookingId);
+        }
+
+        // Call PG
+        PgClient.PgResult pgResult = pgClient.charge(bookingId, payment.getAmount());
 
         if (pgResult.success()) {
             payment.complete(pgResult.transactionId());
@@ -75,14 +88,26 @@ public class PaymentService {
     }
 
     @Transactional
-    public Payment refundPayment(Long paymentId) {
-        log.info("Processing refund for paymentId={}", paymentId);
+    public Payment refundPayment(Long paymentId, Long userId) {
+        log.info("Processing refund for paymentId={}, userId={}", paymentId, userId);
 
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
                         "Payment not found: " + paymentId));
 
-        MockPgClient.PgResult pgResult = mockPgClient.refund(
+        // Verify payment ownership
+        if (!payment.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN,
+                    "User does not own payment: " + paymentId);
+        }
+
+        // Validate status before PG call
+        if (payment.getStatus() != PaymentStatus.COMPLETED) {
+            throw new BusinessException(ErrorCode.REFUND_FAILED,
+                    "Cannot refund payment in status: " + payment.getStatus());
+        }
+
+        PgClient.PgResult pgResult = pgClient.refund(
                 payment.getPgTransactionId(), payment.getAmount());
 
         if (pgResult.success()) {

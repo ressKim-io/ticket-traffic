@@ -1,5 +1,6 @@
 package com.sportstix.payment.domain;
 
+import com.sportstix.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -34,12 +35,12 @@ class PaymentTest {
     }
 
     @Test
-    void complete_fromNonPending_throwsException() {
+    void complete_fromNonPending_throwsBusinessException() {
         Payment payment = createPendingPayment();
         payment.complete("PG-12345");
 
         assertThatThrownBy(() -> payment.complete("PG-99999"))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot complete payment");
     }
 
@@ -54,12 +55,12 @@ class PaymentTest {
     }
 
     @Test
-    void fail_fromNonPending_throwsException() {
+    void fail_fromNonPending_throwsBusinessException() {
         Payment payment = createPendingPayment();
         payment.fail("Some reason");
 
         assertThatThrownBy(() -> payment.fail("Another reason"))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot fail payment");
     }
 
@@ -74,11 +75,11 @@ class PaymentTest {
     }
 
     @Test
-    void refund_fromNonCompleted_throwsException() {
+    void refund_fromNonCompleted_throwsBusinessException() {
         Payment payment = createPendingPayment();
 
         assertThatThrownBy(() -> payment.refund())
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot refund payment");
     }
 

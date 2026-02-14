@@ -11,7 +11,5 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByBookingId(Long bookingId);
 
-    List<Payment> findByUserId(Long userId);
-
     boolean existsByBookingIdAndStatusIn(Long bookingId, List<PaymentStatus> statuses);
 }
