@@ -1,0 +1,53 @@
+# Graceful degradation: custom error responses for circuit breaker and rate limit
+# Returns structured JSON errors instead of generic Envoy error pages
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: graceful-degradation
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+    # Custom response for 503 (circuit breaker tripped / upstream unavailable)
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.lua.fallback
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            inline_code: |
+              function envoy_on_response(response_handle)
+                local status = response_handle:headers():get(":status")
+                local content_type = response_handle:headers():get("content-type") or ""
+
+                -- Only intercept error responses without JSON body
+                if status == "503" and not string.find(content_type, "application/json") then
+                  response_handle:headers():replace("content-type", "application/json")
+                  response_handle:headers():add("retry-after", "5")
+                  response_handle:body():setBytes('{"error":"SERVICE_UNAVAILABLE","message":"Service is temporarily unavailable. Please retry after a few seconds.","status":503}')
+                elseif status == "429" and not string.find(content_type, "application/json") then
+                  response_handle:headers():replace("content-type", "application/json")
+                  -- Preserve existing retry-after header if present
+                  if not response_handle:headers():get("retry-after") then
+                    response_handle:headers():add("retry-after", "10")
+                  end
+                  response_handle:body():setBytes('{"error":"TOO_MANY_REQUESTS","message":"Rate limit exceeded. Please slow down.","status":429}')
+                elseif status == "502" and not string.find(content_type, "application/json") then
+                  response_handle:headers():replace("content-type", "application/json")
+                  response_handle:body():setBytes('{"error":"BAD_GATEWAY","message":"Upstream service error. Please try again later.","status":502}')
+                elseif status == "504" and not string.find(content_type, "application/json") then
+                  response_handle:headers():replace("content-type", "application/json")
+                  response_handle:body():setBytes('{"error":"GATEWAY_TIMEOUT","message":"Request timed out. Please try again.","status":504}')
+                end
+              end

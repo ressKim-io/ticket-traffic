@@ -49,6 +49,31 @@ spec:
               - port: 443
                 targetPort: 8443
                 name: https
+          # HA: spread across nodes and zones
+          podAnnotations:
+            sidecar.istio.io/inject: "false"
+          overlays:
+            - kind: Deployment
+              name: istio-ingressgateway
+              patches:
+                - path: spec.template.spec.affinity
+                  value:
+                    podAntiAffinity:
+                      preferredDuringSchedulingIgnoredDuringExecution:
+                        - weight: 100
+                          podAffinityTerm:
+                            labelSelector:
+                              matchLabels:
+                                istio: ingressgateway
+                            topologyKey: kubernetes.io/hostname
+                - path: spec.template.spec.topologySpreadConstraints
+                  value:
+                    - maxSkew: 1
+                      topologyKey: topology.kubernetes.io/zone
+                      whenUnsatisfiable: ScheduleAnyway
+                      labelSelector:
+                        matchLabels:
+                          istio: ingressgateway
     egressGateways:
       - name: istio-egressgateway
         enabled: false
@@ -64,6 +89,12 @@ spec:
         hpaSpec:
           minReplicas: 2
           maxReplicas: 3
+        priorityClassName: system-cluster-critical
+        env:
+          - name: PILOT_ENABLE_STATUS
+            value: "true"
+          - name: PILOT_PUSH_THROTTLE
+            value: "100"
   values:
     global:
       proxy:

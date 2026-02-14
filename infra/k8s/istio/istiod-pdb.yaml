@@ -1,0 +1,12 @@
+# PDB for Istiod (Pilot) HA
+# Ensures at least 1 Istiod replica during node drains/updates
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: istiod-pdb
+  namespace: istio-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: istiod

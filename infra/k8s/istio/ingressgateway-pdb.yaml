@@ -1,0 +1,12 @@
+# PDB for Istio IngressGateway HA
+# Ensures at least 1 replica during node drains/updates
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ingressgateway-pdb
+  namespace: istio-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      istio: ingressgateway

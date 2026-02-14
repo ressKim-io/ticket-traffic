@@ -1,5 +1,6 @@
 # API routing via Istio IngressGateway
 # Replaces Spring Cloud Gateway route definitions
+# Includes retry policy for resilience against transient failures
 apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
@@ -20,6 +21,10 @@ spec:
             host: auth.sportstix.svc.cluster.local
             port:
               number: 8081
+      retries: &retries
+        attempts: 2
+        perTryTimeout: 3s
+        retryOn: 5xx,reset,connect-failure,refused-stream
       corsPolicy: &cors
         allowOrigins:
           - exact: "https://sportstix.io"
@@ -50,6 +55,7 @@ spec:
             host: auth.sportstix.svc.cluster.local
             port:
               number: 8081
+      retries: *retries
       corsPolicy: *cors
     # Game service
     - match:
@@ -62,6 +68,7 @@ spec:
             host: game.sportstix.svc.cluster.local
             port:
               number: 8082
+      retries: *retries
       corsPolicy: *cors
     # Queue service REST
     - match:
@@ -72,6 +79,7 @@ spec:
             host: queue.sportstix.svc.cluster.local
             port:
               number: 8083
+      retries: *retries
       corsPolicy: *cors
     # Booking service REST
     - match:
@@ -82,6 +90,7 @@ spec:
             host: booking.sportstix.svc.cluster.local
             port:
               number: 8084
+      retries: *retries
       corsPolicy: *cors
     # Payment service
     - match:
@@ -92,6 +101,7 @@ spec:
             host: payment.sportstix.svc.cluster.local
             port:
               number: 8085
+      retries: *retries
       corsPolicy: *cors
     # Admin service
     - match:
@@ -102,8 +112,9 @@ spec:
             host: admin.sportstix.svc.cluster.local
             port:
               number: 8086
+      retries: *retries
       corsPolicy: *cors
-    # Queue WebSocket
+    # Queue WebSocket (no retries - persistent connection)
     - match:
         - uri:
             prefix: "/ws/queue"
@@ -113,7 +124,7 @@ spec:
             port:
               number: 8083
       timeout: 0s
-    # Booking WebSocket
+    # Booking WebSocket (no retries - persistent connection)
     - match:
         - uri:
             prefix: "/ws/booking"
