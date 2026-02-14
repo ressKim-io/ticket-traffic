@@ -34,6 +34,11 @@ management:
     health:
       show-details: when_authorized
 
+logging:
+  level:
+    com.sportstix: INFO
+    org.hibernate.SQL: WARN
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

@@ -75,6 +75,12 @@ management:
     health:
       show-details: when_authorized
 
+logging:
+  level:
+    com.sportstix: INFO
+    org.springframework.cloud.gateway: WARN
+    reactor.netty: WARN
+
 gateway:
   jwt:
     secret: ${JWT_SECRET:sportstix-default-secret-key-for-development-only-32bytes!}
