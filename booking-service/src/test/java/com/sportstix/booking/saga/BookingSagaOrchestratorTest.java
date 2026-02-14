@@ -53,7 +53,7 @@ class BookingSagaOrchestratorTest {
 
         verify(bookingSagaStep).confirm(10L);
         verify(compensationHandler).compensate(eq(10L), contains("Confirmation failed"));
-        verify(idempotencyService, never()).markProcessed(any(), any());
+        verify(idempotencyService).markProcessed(event.getEventId(), Topics.PAYMENT_COMPLETED);
     }
 
     @Test

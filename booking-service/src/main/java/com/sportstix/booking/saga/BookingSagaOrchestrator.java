@@ -37,7 +37,6 @@ public class BookingSagaOrchestrator {
 
         try {
             bookingSagaStep.confirm(event.getBookingId());
-            idempotencyService.markProcessed(event.getEventId(), Topics.PAYMENT_COMPLETED);
             log.info("SAGA completed successfully: bookingId={}", event.getBookingId());
         } catch (Exception e) {
             log.error("SAGA confirm failed, triggering compensation: bookingId={}",
@@ -45,6 +44,7 @@ public class BookingSagaOrchestrator {
             compensationHandler.compensate(event.getBookingId(),
                     "Confirmation failed after payment: " + e.getMessage());
         }
+        idempotencyService.markProcessed(event.getEventId(), Topics.PAYMENT_COMPLETED);
     }
 
     @KafkaListener(topics = Topics.PAYMENT_FAILED, groupId = "booking-saga")
