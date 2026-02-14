@@ -8,10 +8,6 @@ import com.sportstix.booking.jooq.LocalGameSeatJooqRepository;
 import com.sportstix.booking.repository.BookingRepository;
 import com.sportstix.booking.repository.LocalGameRepository;
 import com.sportstix.common.exception.BusinessException;
-import org.jooq.Record4;
-import org.jooq.Result;
-import org.jooq.SQLDialect;
-import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -44,12 +40,14 @@ class BookingServiceTest {
     private SeatLockService seatLockService;
     @Mock
     private BookingEventProducer bookingEventProducer;
+    @Mock
+    private BookingTransactionService transactionService;
 
     @InjectMocks
     private BookingService bookingService;
 
     @Test
-    void holdSeats_success_createsBookingAndHoldsSeats() {
+    void holdSeats_success_delegatesToTransactionService() {
         Long userId = 100L;
         Long gameId = 10L;
         Set<Long> seatIds = Set.of(1L, 2L);
@@ -60,37 +58,18 @@ class BookingServiceTest {
                 .thenReturn(0L);
         when(seatLockService.acquireLocks(seatIds)).thenReturn(List.of(mock(RLock.class)));
 
-        // Mock jOOQ result
-        var dsl = DSL.using(SQLDialect.DEFAULT);
-        Result<Record4<Long, Long, Long, String>> result = dsl.newResult(
-                DSL.field("id", Long.class),
-                DSL.field("game_id", Long.class),
-                DSL.field("price", Long.class),
-                DSL.field("status", String.class));
-        result.add(dsl.newRecord(
-                DSL.field("id", Long.class),
-                DSL.field("game_id", Long.class),
-                DSL.field("price", Long.class),
-                DSL.field("status", String.class))
-                .values(1L, gameId, 50000L, "AVAILABLE"));
-        result.add(dsl.newRecord(
-                DSL.field("id", Long.class),
-                DSL.field("game_id", Long.class),
-                DSL.field("price", Long.class),
-                DSL.field("status", String.class))
-                .values(2L, gameId, 50000L, "AVAILABLE"));
-
-        when(seatJooqRepository.findByIdsForUpdateSkipLocked(seatIds, "AVAILABLE")).thenReturn(result);
-        when(seatJooqRepository.bulkUpdateStatus(seatIds, "AVAILABLE", "HELD")).thenReturn(2);
-        when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
+        Booking expected = Booking.builder().userId(userId).gameId(gameId).build();
+        expected.addSeat(1L, BigDecimal.valueOf(50000));
+        expected.addSeat(2L, BigDecimal.valueOf(50000));
+        when(transactionService.holdSeatsInTransaction(userId, gameId, seatIds))
+                .thenReturn(expected);
 
         Booking booking = bookingService.holdSeats(userId, gameId, seatIds);
 
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.PENDING);
         assertThat(booking.getTotalPrice()).isEqualTo(BigDecimal.valueOf(100000));
         assertThat(booking.getBookingSeats()).hasSize(2);
-        verify(bookingEventProducer).publishBookingCreated(any());
-        verify(bookingEventProducer).publishSeatsHeld(any());
+        verify(transactionService).holdSeatsInTransaction(userId, gameId, seatIds);
         verify(seatLockService).releaseLocks(any());
     }
 
@@ -110,7 +89,7 @@ class BookingServiceTest {
     }
 
     @Test
-    void holdSeats_seatsNotAvailable_throwsException() {
+    void holdSeats_transactionFails_releasesLocks() {
         Long userId = 100L;
         Long gameId = 10L;
         Set<Long> seatIds = Set.of(1L, 2L);
@@ -120,58 +99,85 @@ class BookingServiceTest {
         when(bookingRepository.countByUserIdAndGameIdAndStatusIn(eq(userId), eq(gameId), any()))
                 .thenReturn(0L);
         when(seatLockService.acquireLocks(seatIds)).thenReturn(List.of(mock(RLock.class)));
-
-        // Return only 1 seat (seat 2 is already taken)
-        var dsl = DSL.using(SQLDialect.DEFAULT);
-        Result<Record4<Long, Long, Long, String>> result = dsl.newResult(
-                DSL.field("id", Long.class),
-                DSL.field("game_id", Long.class),
-                DSL.field("price", Long.class),
-                DSL.field("status", String.class));
-        result.add(dsl.newRecord(
-                DSL.field("id", Long.class),
-                DSL.field("game_id", Long.class),
-                DSL.field("price", Long.class),
-                DSL.field("status", String.class))
-                .values(1L, gameId, 50000L, "AVAILABLE"));
-
-        when(seatJooqRepository.findByIdsForUpdateSkipLocked(seatIds, "AVAILABLE")).thenReturn(result);
+        when(transactionService.holdSeatsInTransaction(userId, gameId, seatIds))
+                .thenThrow(new BusinessException(
+                        com.sportstix.common.response.ErrorCode.SEAT_NOT_AVAILABLE, "Not available"));
 
         assertThatThrownBy(() -> bookingService.holdSeats(userId, gameId, seatIds))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("no longer available");
+                .isInstanceOf(BusinessException.class);
 
         verify(seatLockService).releaseLocks(any());
     }
 
     @Test
     void confirmBooking_success_confirmsAndReservesSeats() {
-        Booking booking = Booking.builder().userId(100L).gameId(10L).build();
+        Long userId = 100L;
+        Booking booking = Booking.builder().userId(userId).gameId(10L).build();
         booking.addSeat(1L, BigDecimal.valueOf(50000));
 
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
         when(seatJooqRepository.bulkUpdateStatus(any(), eq("HELD"), eq("RESERVED"))).thenReturn(1);
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Booking result = bookingService.confirmBooking(1L);
+        Booking result = bookingService.confirmBooking(1L, userId);
 
         assertThat(result.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
         verify(bookingEventProducer).publishBookingConfirmed(any());
     }
 
     @Test
-    void cancelBooking_success_releasesSeats() {
+    void confirmBooking_wrongUser_throwsForbidden() {
         Booking booking = Booking.builder().userId(100L).gameId(10L).build();
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.confirmBooking(1L, 999L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("User does not own booking");
+    }
+
+    @Test
+    void confirmBooking_partialSeatUpdate_throwsException() {
+        Long userId = 100L;
+        Booking booking = Booking.builder().userId(userId).gameId(10L).build();
+        booking.addSeat(1L, BigDecimal.valueOf(50000));
+        booking.addSeat(2L, BigDecimal.valueOf(50000));
+
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(seatJooqRepository.bulkUpdateStatus(any(), eq("HELD"), eq("RESERVED"))).thenReturn(1);
+
+        assertThatThrownBy(() -> bookingService.confirmBooking(1L, userId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Failed to reserve all seats");
+    }
+
+    @Test
+    void cancelBooking_success_releasesSeats() {
+        Long userId = 100L;
+        Booking booking = Booking.builder().userId(userId).gameId(10L).build();
         booking.addSeat(1L, BigDecimal.valueOf(50000));
 
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Booking result = bookingService.cancelBooking(1L, 100L);
+        Booking result = bookingService.cancelBooking(1L, userId);
 
         assertThat(result.getStatus()).isEqualTo(BookingStatus.CANCELLED);
         verify(bookingEventProducer).publishBookingCancelled(any());
         verify(bookingEventProducer).publishSeatsReleased(any());
+    }
+
+    @Test
+    void cancelBooking_alreadyCancelled_returnsWithoutEvents() {
+        Long userId = 100L;
+        Booking booking = Booking.builder().userId(userId).gameId(10L).build();
+        booking.cancel();
+
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+
+        Booking result = bookingService.cancelBooking(1L, userId);
+
+        assertThat(result.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+        verify(bookingEventProducer, never()).publishBookingCancelled(any());
     }
 
     @Test
@@ -180,6 +186,16 @@ class BookingServiceTest {
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
 
         assertThatThrownBy(() -> bookingService.cancelBooking(1L, 999L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("User does not own booking");
+    }
+
+    @Test
+    void getBooking_wrongUser_throwsForbidden() {
+        Booking booking = Booking.builder().userId(100L).gameId(10L).build();
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.getBooking(1L, 999L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("User does not own booking");
     }
