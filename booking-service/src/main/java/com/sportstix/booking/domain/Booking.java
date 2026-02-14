@@ -61,7 +61,7 @@ public class Booking extends BaseTimeEntity {
 
     public void confirm() {
         if (this.status != BookingStatus.PENDING) {
-            throw new BusinessException(ErrorCode.BOOKING_NOT_FOUND,
+            throw new BusinessException(ErrorCode.INVALID_INPUT,
                     "Cannot confirm booking: current status=" + this.status);
         }
         this.status = BookingStatus.CONFIRMED;

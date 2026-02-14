@@ -10,15 +10,13 @@ import com.sportstix.common.exception.BusinessException;
 import com.sportstix.common.response.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.Record4;
-import org.jooq.Result;
 import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.sportstix.booking.jooq.LocalGameSeatJooqRepository.*;
 
@@ -34,6 +32,7 @@ public class BookingService {
     private final LocalGameSeatJooqRepository seatJooqRepository;
     private final SeatLockService seatLockService;
     private final BookingEventProducer bookingEventProducer;
+    private final BookingTransactionService transactionService;
 
     /**
      * Hold seats with 3-tier lock:
@@ -63,65 +62,25 @@ public class BookingService {
         // Tier 1: Redis distributed lock
         List<RLock> locks = seatLockService.acquireLocks(gameSeatIds);
         try {
-            return holdSeatsWithDbLock(userId, gameId, gameSeatIds);
+            // Tier 2 & 3: called via proxy (separate bean) to ensure @Transactional works
+            return transactionService.holdSeatsInTransaction(userId, gameId, gameSeatIds);
         } finally {
             seatLockService.releaseLocks(locks);
         }
     }
 
-    /**
-     * Tier 2 & 3: DB pessimistic lock + optimistic lock within transaction.
-     */
     @Transactional
-    public Booking holdSeatsWithDbLock(Long userId, Long gameId, Set<Long> gameSeatIds) {
-        // Tier 2: DB pessimistic lock (FOR UPDATE SKIP LOCKED)
-        Result<Record4<Long, Long, Long, String>> lockedSeats =
-                seatJooqRepository.findByIdsForUpdateSkipLocked(gameSeatIds, AVAILABLE);
-
-        if (lockedSeats.size() != gameSeatIds.size()) {
-            throw new BusinessException(ErrorCode.SEAT_NOT_AVAILABLE,
-                    "Some seats are no longer available. Requested=" + gameSeatIds.size()
-                            + ", available=" + lockedSeats.size());
-        }
-
-        // Create booking
-        Booking booking = Booking.builder()
-                .userId(userId)
-                .gameId(gameId)
-                .build();
-
-        for (var seat : lockedSeats) {
-            Long seatId = seat.get(0, Long.class);
-            Long price = seat.get(2, Long.class);
-            booking.addSeat(seatId, BigDecimal.valueOf(price));
-        }
-
-        booking = bookingRepository.save(booking);
-
-        // Tier 2 continued: Update seat status (AVAILABLE -> HELD)
-        int updated = seatJooqRepository.bulkUpdateStatus(gameSeatIds, AVAILABLE, HELD);
-        if (updated != gameSeatIds.size()) {
-            throw new BusinessException(ErrorCode.SEAT_NOT_AVAILABLE,
-                    "Failed to hold all seats. Expected=" + gameSeatIds.size()
-                            + ", updated=" + updated);
-        }
-
-        log.info("Seats held: bookingId={}, seats={}", booking.getId(), gameSeatIds);
-
-        // Publish events
-        bookingEventProducer.publishBookingCreated(booking);
-        bookingEventProducer.publishSeatsHeld(booking);
-
-        return booking;
-    }
-
-    @Transactional
-    public Booking confirmBooking(Long bookingId) {
-        log.info("Confirming booking: bookingId={}", bookingId);
+    public Booking confirmBooking(Long bookingId, Long userId) {
+        log.info("Confirming booking: bookingId={}, userId={}", bookingId, userId);
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BOOKING_NOT_FOUND,
                         "Booking not found: " + bookingId));
+
+        if (!booking.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN,
+                    "User does not own booking: " + bookingId);
+        }
 
         if (booking.isExpired()) {
             throw new BusinessException(ErrorCode.BOOKING_EXPIRED,
@@ -130,13 +89,14 @@ public class BookingService {
 
         Set<Long> seatIds = booking.getBookingSeats().stream()
                 .map(bs -> bs.getGameSeatId())
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
 
         // Update seats HELD -> RESERVED
         int updated = seatJooqRepository.bulkUpdateStatus(seatIds, HELD, RESERVED);
         if (updated != seatIds.size()) {
-            log.warn("Partial seat reservation: bookingId={}, expected={}, updated={}",
-                    bookingId, seatIds.size(), updated);
+            throw new BusinessException(ErrorCode.SEAT_NOT_AVAILABLE,
+                    "Failed to reserve all seats. Expected=" + seatIds.size()
+                            + ", updated=" + updated);
         }
 
         booking.confirm();
@@ -161,16 +121,14 @@ public class BookingService {
                     "User does not own booking: " + bookingId);
         }
 
-        return releaseBooking(booking);
-    }
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            return booking;
+        }
 
-    @Transactional
-    public Booking releaseBooking(Booking booking) {
         Set<Long> seatIds = booking.getBookingSeats().stream()
                 .map(bs -> bs.getGameSeatId())
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
 
-        // Release seats back to AVAILABLE (from HELD or RESERVED)
         seatJooqRepository.bulkUpdateStatus(seatIds, HELD, AVAILABLE);
         seatJooqRepository.bulkUpdateStatus(seatIds, RESERVED, AVAILABLE);
 
@@ -185,9 +143,16 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public Booking getBooking(Long bookingId) {
-        return bookingRepository.findById(bookingId)
+    public Booking getBooking(Long bookingId, Long userId) {
+        Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BOOKING_NOT_FOUND,
                         "Booking not found: " + bookingId));
+
+        if (!booking.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN,
+                    "User does not own booking: " + bookingId);
+        }
+
+        return booking;
     }
 }

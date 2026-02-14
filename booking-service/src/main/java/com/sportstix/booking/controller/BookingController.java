@@ -28,8 +28,9 @@ public class BookingController {
 
     @PostMapping("/{bookingId}/confirm")
     public ResponseEntity<ApiResponse<BookingResponse>> confirmBooking(
-            @PathVariable Long bookingId) {
-        var booking = bookingService.confirmBooking(bookingId);
+            @PathVariable Long bookingId,
+            @RequestHeader("X-User-Id") Long userId) {
+        var booking = bookingService.confirmBooking(bookingId, userId);
         return ResponseEntity.ok(ApiResponse.ok(BookingResponse.from(booking)));
     }
 
@@ -43,8 +44,9 @@ public class BookingController {
 
     @GetMapping("/{bookingId}")
     public ResponseEntity<ApiResponse<BookingResponse>> getBooking(
-            @PathVariable Long bookingId) {
-        var booking = bookingService.getBooking(bookingId);
+            @PathVariable Long bookingId,
+            @RequestHeader("X-User-Id") Long userId) {
+        var booking = bookingService.getBooking(bookingId, userId);
         return ResponseEntity.ok(ApiResponse.ok(BookingResponse.from(booking)));
     }
 }
