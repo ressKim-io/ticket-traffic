@@ -1,3 +1,11 @@
+x-otel-env: &otel-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+  OTEL_TRACES_SAMPLER: parentbased_always_on
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment=docker
+
 services:
   # ============================================
   # Infrastructure (included from infra/)
@@ -22,6 +30,31 @@ services:
       file: infra/docker-compose.yml
       service: kafka-ui
 
+  otel-collector:
+    extends:
+      file: infra/docker-compose.yml
+      service: otel-collector
+
+  tempo:
+    extends:
+      file: infra/docker-compose.yml
+      service: tempo
+
+  loki:
+    extends:
+      file: infra/docker-compose.yml
+      service: loki
+
+  promtail:
+    extends:
+      file: infra/docker-compose.yml
+      service: promtail
+
+  grafana:
+    extends:
+      file: infra/docker-compose.yml
+      service: grafana
+
   # ============================================
   # Application Services
   # ============================================
@@ -35,17 +68,19 @@ services:
     ports:
       - "8080:8080"
     environment:
+      <<: *otel-env
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
       SPRING_DATA_REDIS_HOST: redis
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
+      OTEL_SERVICE_NAME: gateway-service
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       redis:
         condition: service_healthy
     deploy:
       resources:
         limits:
-          memory: 384m
+          memory: 512m
 
   auth-service:
     build:
@@ -57,13 +92,15 @@ services:
     ports:
       - "8081:8081"
     environment:
+      <<: *otel-env
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_auth
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
+      OTEL_SERVICE_NAME: auth-service
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,7 +109,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384m
+          memory: 512m
 
   game-service:
     build:
@@ -84,6 +121,7 @@ services:
     ports:
       - "8082:8082"
     environment:
+      <<: *otel-env
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_game
@@ -91,7 +129,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
+      OTEL_SERVICE_NAME: game-service
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,7 +141,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384m
+          memory: 512m
 
   queue-service:
     build:
@@ -114,11 +153,13 @@ services:
     ports:
       - "8083:8083"
     environment:
+      <<: *otel-env
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8083
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m"
+      OTEL_SERVICE_NAME: queue-service
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx512m -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       redis:
         condition: service_healthy
@@ -127,7 +168,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 640m
 
   booking-service:
     build:
@@ -139,6 +180,7 @@ services:
     ports:
       - "8084:8084"
     environment:
+      <<: *otel-env
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_booking
@@ -146,7 +188,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m"
+      OTEL_SERVICE_NAME: booking-service
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx512m -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
@@ -157,7 +200,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 640m
 
   payment-service:
     build:
@@ -169,13 +212,15 @@ services:
     ports:
       - "8085:8085"
     environment:
+      <<: *otel-env
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8085
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_payment
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
+      OTEL_SERVICE_NAME: payment-service
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
@@ -184,7 +229,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384m
+          memory: 512m
 
   admin-service:
     build:
@@ -196,13 +241,15 @@ services:
     ports:
       - "8086:8086"
     environment:
+      <<: *otel-env
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8086
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_admin
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
+      OTEL_SERVICE_NAME: admin-service
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
@@ -211,7 +258,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384m
+          memory: 512m
 
   # ============================================
   # Frontend
@@ -239,3 +286,6 @@ volumes:
   postgres_data:
   redis_data:
   kafka_data:
+  tempo_data:
+  loki_data:
+  grafana_data:
