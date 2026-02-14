@@ -116,6 +116,58 @@ spec:
     scaleDown:
       stabilizationWindowSeconds: 300
 ---
+# Game - scales with game/seat query traffic
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: game-hpa
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: game
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+---
+# Payment - scales with payment processing load
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-hpa
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+---
 # Frontend - scales with user traffic
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
