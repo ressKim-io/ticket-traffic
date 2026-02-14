@@ -1,0 +1,10 @@
+# EBS volume snapshot location for Velero
+apiVersion: velero.io/v1
+kind: VolumeSnapshotLocation
+metadata:
+  name: default
+  namespace: velero
+spec:
+  provider: aws
+  config:
+    region: ap-northeast-2
