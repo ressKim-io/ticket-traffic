@@ -30,3 +30,4 @@ export type {
   BookingResponse,
   BookingSeatInfo,
 } from "./booking";
+export type { DashboardResponse, GameStatsResponse } from "./admin";
