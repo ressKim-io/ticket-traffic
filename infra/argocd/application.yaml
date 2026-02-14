@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sportstix
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: sportstix
+  source:
+    repoURL: https://github.com/ressKim-io/ticket-traffic.git
+    targetRevision: main
+    path: infra/k8s
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sportstix
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m
