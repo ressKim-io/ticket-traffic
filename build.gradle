@@ -33,12 +33,6 @@ subprojects {
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
 
-        // Prometheus metrics for all services with actuator
-        runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
-
-        // OpenAPI documentation
-        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
-
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
     }
 
