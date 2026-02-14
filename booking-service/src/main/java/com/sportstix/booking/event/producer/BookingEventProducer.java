@@ -22,7 +22,8 @@ public class BookingEventProducer {
         for (BookingSeat seat : booking.getBookingSeats()) {
             BookingEvent event = BookingEvent.created(
                     booking.getId(), booking.getUserId(),
-                    booking.getGameId(), seat.getGameSeatId());
+                    booking.getGameId(), seat.getGameSeatId(),
+                    booking.getTotalPrice());
             publish(Topics.BOOKING_CREATED, key, event, "booking-created");
         }
     }
