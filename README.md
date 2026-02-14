@@ -15,6 +15,10 @@ MSA Event-Driven sports ticketing system designed for high-concurrency seat book
 | Delivery | Argo Rollouts (canary), KEDA (event-driven autoscaling) |
 | Observability | OpenTelemetry, Prometheus, Grafana, Tempo, Loki |
 | Resilience | Chaos Mesh, Velero (DR), Kyverno (policy), ESO (secrets) |
+| Security | Falco (runtime), Trivy + Cosign (supply chain), cert-manager (TLS) |
+| FinOps | OpenCost (cost allocation), Goldilocks (VPA right-sizing) |
+| IDP | Backstage (service catalog, Golden Path templates) |
+| GitOps | ArgoCD ApplicationSet (multi-env), Notifications (Slack alerts) |
 | Testing | JUnit 5, Mockito, Testcontainers, K6 |
 
 ## Architecture
@@ -247,6 +251,28 @@ Dead Letter Topics: `{topic}.DLT` with 3x exponential backoff retry (1s -> 2s ->
 | Secrets | External Secrets Operator | AWS Secrets Manager via IRSA |
 | SLO/SLI | Prometheus Recording Rules | 99.95% availability, 99.5% latency, 4-tier burn-rate alerts |
 
+### GitOps & Delivery
+
+| Component | Tool | Description |
+|-----------|------|-------------|
+| Multi-Env | ArgoCD ApplicationSet | goTemplate list generator for dev/staging/prod, conditional autoSync |
+| Notifications | ArgoCD Notifications | Slack alerts for sync success/failure/degraded, health changes |
+| TLS Automation | cert-manager | Let's Encrypt ClusterIssuer (prod/staging), auto-renewal Certificate |
+| Runtime Security | Falco | modern_ebpf driver, custom sportstix rules, Falcosidekick Slack alerts |
+
+### FinOps & Resource Optimization
+
+| Component | Tool | Description |
+|-----------|------|-------------|
+| Cost Allocation | OpenCost | Per-namespace/service cost analysis, Prometheus integration |
+| Right-Sizing | Goldilocks + VPA | Vertical Pod Autoscaler recommendations dashboard |
+
+### Internal Developer Platform (Backstage)
+
+- **Service Catalog**: System, Domain, 8 Components, 7 API definitions
+- **Golden Path**: Spring Boot microservice scaffolder template
+- **Dependency Graph**: Inter-service relationships and API ownership
+
 ### CI/CD Pipeline
 
 ```
@@ -270,7 +296,7 @@ sportstix/
 ├── frontend/                # Next.js 14
 ├── infra/
 │   ├── docker-compose.yml   # PostgreSQL, Redis, Kafka
-│   ├── argocd/              # ArgoCD Applications (Rollouts, KEDA, Velero, Chaos Mesh, ...)
+│   ├── argocd/              # ArgoCD Applications (Rollouts, KEDA, Velero, Chaos Mesh, Falco, OpenCost, ...)
 │   ├── k8s/
 │   │   ├── services/        # Deployments / Rollouts
 │   │   ├── istio/           # VirtualService, DestinationRule, PeerAuthentication
@@ -281,7 +307,9 @@ sportstix/
 │   │   ├── monitoring/      # SLO recording/alerting rules, Grafana dashboards
 │   │   └── ...              # configmaps, hpa, pdb, network-policies, rbac
 │   └── terraform/           # AWS EKS infrastructure
+├── backstage/               # IDP templates (Golden Path scaffolder)
 ├── k6/                      # Load test scenarios
+├── catalog-info.yaml        # Backstage service catalog
 ├── build.gradle             # Root build config
 └── docker-compose.yml       # Service orchestration
 ```
