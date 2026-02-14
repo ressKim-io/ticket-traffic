@@ -1,4 +1,4 @@
-# Auth Service: only from gateway
+# Auth Service: from gateway + monitoring (Prometheus scraping)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -18,8 +18,15 @@ spec:
       ports:
         - port: 8081
           protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8081
+          protocol: TCP
 ---
-# Game Service: only from gateway
+# Game Service: from gateway + monitoring
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -39,8 +46,15 @@ spec:
       ports:
         - port: 8082
           protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8082
+          protocol: TCP
 ---
-# Queue Service: only from gateway (REST + WebSocket)
+# Queue Service: from gateway (REST + WebSocket) + monitoring
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -60,8 +74,15 @@ spec:
       ports:
         - port: 8083
           protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8083
+          protocol: TCP
 ---
-# Booking Service: only from gateway
+# Booking Service: from gateway + monitoring
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -81,8 +102,15 @@ spec:
       ports:
         - port: 8084
           protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8084
+          protocol: TCP
 ---
-# Payment Service: only from gateway
+# Payment Service: from gateway + monitoring
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -102,8 +130,15 @@ spec:
       ports:
         - port: 8085
           protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8085
+          protocol: TCP
 ---
-# Admin Service: only from gateway
+# Admin Service: from gateway + monitoring
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -120,6 +155,13 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: gateway
+      ports:
+        - port: 8086
+          protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
       ports:
         - port: 8086
           protocol: TCP
