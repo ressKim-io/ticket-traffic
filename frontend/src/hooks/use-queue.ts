@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
+import type { Client } from "@stomp/stompjs";
 import { apiClient } from "@/lib";
 import { getStompClient, subscribe, disconnectStomp } from "@/lib/ws-client";
 import { useQueueStore } from "@/stores";
@@ -92,12 +93,13 @@ export function useQueueLeave() {
 
 /**
  * Subscribe to real-time queue updates via WebSocket.
- * Automatically connects/disconnects based on component lifecycle.
+ * Handles Strict Mode double-mount and proper cleanup.
  */
 export function useQueueWebSocket(gameId: number) {
   const { updatePosition, setConnected } = useQueueStore();
   const user = useAuthStore((s) => s.user);
   const subscriptionsRef = useRef<Array<{ unsubscribe: () => void }>>([]);
+  const clientRef = useRef<Client | null>(null);
 
   const handleMessage = useCallback(
     (msg: QueueUpdateMessage) => {
@@ -115,7 +117,11 @@ export function useQueueWebSocket(gameId: number) {
   useEffect(() => {
     if (!user?.id || !gameId) return;
 
+    // Prevent duplicate connections (React Strict Mode)
+    if (clientRef.current?.active) return;
+
     const client = getStompClient(user.id);
+    clientRef.current = client;
 
     client.onConnect = () => {
       setConnected(true);
@@ -127,14 +133,13 @@ export function useQueueWebSocket(gameId: number) {
         handleMessage
       );
 
-      // Public topic (general stats)
+      // Public topic (general stats - uses getState for fresh data)
       const publicSub = subscribe<QueueUpdateMessage>(
         client,
         `/topic/queue/${gameId}`,
         (msg) => {
-          // Only update totalWaiting from public topic if we're still WAITING
-          const store = useQueueStore.getState();
-          if (store.status === "WAITING" && msg.totalWaiting != null) {
+          const current = useQueueStore.getState();
+          if (current.status === "WAITING" && msg.totalWaiting != null) {
             useQueueStore.setState({ totalWaiting: msg.totalWaiting });
           }
         }
@@ -152,12 +157,17 @@ export function useQueueWebSocket(gameId: number) {
       setConnected(false);
     };
 
-    client.activate();
+    if (!client.active) {
+      client.activate();
+    }
 
     return () => {
       subscriptionsRef.current.forEach((s) => s.unsubscribe());
       subscriptionsRef.current = [];
-      disconnectStomp();
+      if (clientRef.current) {
+        clientRef.current.deactivate();
+        clientRef.current = null;
+      }
       setConnected(false);
     };
   }, [gameId, user?.id, handleMessage, setConnected]);

@@ -12,9 +12,18 @@ export interface WsSubscription {
 
 /**
  * Get or create a shared STOMP client over SockJS.
- * The client auto-reconnects with exponential backoff.
+ * If the userId has changed, deactivates the old client first.
  */
 export function getStompClient(userId: number): Client {
+  // Deactivate existing client if userId changed
+  if (
+    stompClient &&
+    stompClient.connectHeaders?.["X-User-Id"] !== String(userId)
+  ) {
+    stompClient.deactivate();
+    stompClient = null;
+  }
+
   if (stompClient?.active) return stompClient;
 
   const client = new Client({
@@ -38,7 +47,7 @@ export function getStompClient(userId: number): Client {
 
 /**
  * Subscribe to a STOMP destination after ensuring the client is connected.
- * Returns an unsubscribe handle.
+ * Chains onConnect handlers to safely support multiple subscriptions.
  */
 export function subscribe<T>(
   client: Client,
@@ -53,7 +62,7 @@ export function subscribe<T>(
         const parsed = JSON.parse(message.body) as T;
         callback(parsed);
       } catch {
-        console.error("[STOMP] Failed to parse message:", message.body);
+        console.warn("[STOMP] Failed to parse message:", message.body);
       }
     });
   };
@@ -61,10 +70,10 @@ export function subscribe<T>(
   if (client.connected) {
     doSubscribe();
   } else {
-    // Wait for connection then subscribe
-    const prevOnConnect = client.onConnect;
+    // Chain onConnect handlers instead of overwriting
+    const previousOnConnect = client.onConnect;
     client.onConnect = (frame) => {
-      prevOnConnect?.(frame);
+      previousOnConnect?.(frame);
       doSubscribe();
     };
   }

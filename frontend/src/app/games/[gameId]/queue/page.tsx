@@ -34,11 +34,12 @@ function QueueContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isValidId]);
 
-  // Auto-redirect when token is received
+  // Auto-redirect when token is received (store token in sessionStorage, not URL)
   useEffect(() => {
     if (status === "ELIGIBLE" && token) {
+      sessionStorage.setItem(`queue-token-${id}`, token);
       const timer = setTimeout(() => {
-        router.push(`/games/${id}/seats?token=${token}`);
+        router.push(`/games/${id}/seats`);
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -161,7 +162,7 @@ function QueueContent() {
             </h2>
 
             {/* Stats */}
-            <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="mt-6 grid grid-cols-2 gap-4" aria-live="polite" aria-atomic="true">
               <div className="rounded-lg bg-gray-50 p-3 text-center">
                 <p className="text-xs text-gray-500">Your Position</p>
                 <p className="mt-1 text-lg font-bold text-primary-700">
