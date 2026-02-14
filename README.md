@@ -204,15 +204,24 @@ Dead Letter Topics: `{topic}.DLT` with 3x exponential backoff retry (1s -> 2s ->
 
 ### Service Mesh (Istio)
 
-- **East-West mTLS**: STRICT PeerAuthentication for all services
-- **Traffic Management**: VirtualService + DestinationRule per service
-- **WebSocket Support**: `h2UpgradePolicy: DO_NOT_UPGRADE`, `timeout: 0s`
-- North-south traffic via NGINX Ingress (Istio IngressGateway disabled)
+| Plane | Component | Description |
+|-------|-----------|-------------|
+| **North-South** | IngressGateway | JWT validation (RS256/JWKS), API routing, CORS, rate limiting, bot detection |
+| **East-West** | Sidecar (Envoy) | STRICT mTLS, circuit breaker, connection pooling |
+| **Control** | Istiod (HA) | priorityClassName: system-cluster-critical, PDB minAvailable: 1 |
+
+**Traffic Flow**: `Client → Istio IngressGateway → Istio Sidecar → Backend`
+
+- **JWT**: RequestAuthentication with JWKS endpoint (`auth:8081/.well-known/jwks.json`)
+- **EnvoyFilters**: JWT claim header injection (Lua), local rate limit (50 RPS), bot UA detection (Lua), graceful degradation (JSON 503/429/502/504)
+- **Resilience**: Circuit breaker (3x 5xx → 60s ejection, max 30%), retry policy (2 attempts, 3s perTryTimeout)
+- **HA**: IngressGateway PDB + pod anti-affinity + zone topology spread, HPA 2-6 replicas
+- **WebSocket**: `h2UpgradePolicy: DO_NOT_UPGRADE`, `timeout: 0s` (no retries)
 
 ### Progressive Delivery (Argo Rollouts)
 
-- **Canary Deployments**: gateway, booking services
-- **Traffic Splitting**: Istio VirtualService weight-based (20% -> 40% -> 60% -> 80%)
+- **Canary Deployments**: booking service (Istio VirtualService weight-based)
+- **Traffic Splitting**: 20% -> 40% -> 60% -> 80% with analysis gates
 - **Automated Analysis**: Prometheus AnalysisTemplates (success-rate >= 95%, p99 < 2s)
 - Auto-rollback on metric failure
 
@@ -236,7 +245,7 @@ Dead Letter Topics: `{topic}.DLT` with 3x exponential backoff retry (1s -> 2s ->
 |------------|------|--------|-----------|
 | booking-pod-kill | PodChaos | booking | PDB + KEDA recovery |
 | payment-pod-kill | PodChaos | payment | PDB recovery |
-| gateway-backend-latency | NetworkChaos | gateway -> backend | Istio outlier detection |
+| backend-ingress-latency | NetworkChaos | ingressgateway -> backend | Istio outlier detection |
 | booking-egress-latency | NetworkChaos | booking -> DB | HikariCP timeout handling |
 | payment-egress-loss | NetworkChaos | payment -> Kafka | Kafka retry + idempotency |
 | resilience-validation | Workflow | Multi-step | End-to-end resilience (pod-kill -> health check -> latency -> health check) |
@@ -268,7 +277,7 @@ Dead Letter Topics: `{topic}.DLT` with 3x exponential backoff retry (1s -> 2s ->
 
 ### Internal Developer Platform (Backstage)
 
-- **Service Catalog**: System, Domain, 8 Components, 7 API definitions
+- **Service Catalog**: System, Domain, 7 Components, 6 API definitions
 - **Golden Path**: Spring Boot microservice scaffolder template
 - **Dependency Graph**: Inter-service relationships and API ownership
 
@@ -285,8 +294,8 @@ Deploy:       ArgoCD auto-sync -> Argo Rollouts canary -> Prometheus analysis
 ```
 sportstix/
 ├── common/                  # Shared: ApiResponse, ErrorCode, BaseEntity, Events
-├── gateway-service/         # API Gateway (WebFlux)
-├── auth-service/            # Auth (JWT, Spring Security)
+├── gateway-service/         # API Gateway - local dev only (K8s: Istio IngressGateway)
+├── auth-service/            # Auth (RS256 JWT, JWKS, Spring Security)
 ├── game-service/            # Game (Stadium, Section, Seat)
 ├── queue-service/           # Queue (Redis, WebSocket)
 ├── booking-service/         # Booking (jOOQ + JPA, SAGA, 3-tier Lock)
@@ -298,7 +307,7 @@ sportstix/
 │   ├── argocd/              # ArgoCD Applications (Rollouts, KEDA, Velero, Chaos Mesh, Falco, OpenCost, ...)
 │   ├── k8s/
 │   │   ├── services/        # Deployments / Rollouts
-│   │   ├── istio/           # VirtualService, DestinationRule, PeerAuthentication
+│   │   ├── istio/           # IngressGateway, RequestAuthentication, EnvoyFilter, VirtualService
 │   │   ├── rollouts/        # AnalysisTemplates, canary VirtualServices
 │   │   ├── keda/            # ScaledObjects, TriggerAuthentication
 │   │   ├── velero/           # BackupStorageLocation, Schedules
