@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: goldilocks
+  namespace: argocd
+spec:
+  project: sportstix
+  source:
+    repoURL: https://charts.fairwinds.com/stable
+    chart: goldilocks
+    targetRevision: 9.0.1
+    helm:
+      releaseName: goldilocks
+      values: |
+        vpa:
+          enabled: true
+        dashboard:
+          enabled: true
+          replicaCount: 1
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+        controller:
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: goldilocks
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
