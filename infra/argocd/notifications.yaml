@@ -1,0 +1,129 @@
+# ArgoCD Notifications - Slack integration
+# Sends deployment status to Slack channel
+# Prerequisites: Create argocd-notifications-secret with slack-token key
+---
+# Notification templates and triggers
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  # Slack service configuration
+  service.slack: |
+    token: $slack-token
+    signingSecret: $slack-signing-secret
+
+  # Notification templates
+  template.app-sync-succeeded: |
+    slack:
+      attachments: |
+        [{
+          "color": "#18be52",
+          "title": "{{.app.metadata.name}} synced successfully",
+          "fields": [
+            {"title": "Application", "value": "{{.app.metadata.name}}", "short": true},
+            {"title": "Namespace", "value": "{{.app.spec.destination.namespace}}", "short": true},
+            {"title": "Revision", "value": "{{.app.status.sync.revision | truncate 7 }}", "short": true},
+            {"title": "Status", "value": "{{.app.status.sync.status}}", "short": true}
+          ]
+        }]
+
+  template.app-sync-failed: |
+    slack:
+      attachments: |
+        [{
+          "color": "#E96D76",
+          "title": ":x: {{.app.metadata.name}} sync failed",
+          "fields": [
+            {"title": "Application", "value": "{{.app.metadata.name}}", "short": true},
+            {"title": "Namespace", "value": "{{.app.spec.destination.namespace}}", "short": true},
+            {"title": "Error", "value": "{{.app.status.operationState.message | truncate 200 }}", "short": false}
+          ]
+        }]
+
+  template.app-health-degraded: |
+    slack:
+      attachments: |
+        [{
+          "color": "#f4c030",
+          "title": ":warning: {{.app.metadata.name}} health degraded",
+          "fields": [
+            {"title": "Application", "value": "{{.app.metadata.name}}", "short": true},
+            {"title": "Health", "value": "{{.app.status.health.status}}", "short": true}
+          ]
+        }]
+
+  template.rollout-completed: |
+    slack:
+      attachments: |
+        [{
+          "color": "#18be52",
+          "title": ":rocket: {{.app.metadata.name}} rollout completed",
+          "fields": [
+            {"title": "Application", "value": "{{.app.metadata.name}}", "short": true},
+            {"title": "Revision", "value": "{{.app.status.sync.revision | truncate 7 }}", "short": true}
+          ]
+        }]
+
+  template.rollout-aborted: |
+    slack:
+      attachments: |
+        [{
+          "color": "#E96D76",
+          "title": ":rotating_light: {{.app.metadata.name}} rollout aborted",
+          "fields": [
+            {"title": "Application", "value": "{{.app.metadata.name}}", "short": true},
+            {"title": "Namespace", "value": "{{.app.spec.destination.namespace}}", "short": true}
+          ]
+        }]
+
+  # Triggers - map events to templates
+  trigger.on-sync-succeeded: |
+    - when: app.status.operationState.phase in ['Succeeded']
+      send: [app-sync-succeeded]
+
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-sync-failed]
+
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+
+  trigger.on-rollout-completed: |
+    - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      send: [rollout-completed]
+
+  trigger.on-rollout-aborted: |
+    - when: app.status.health.status == 'Degraded' and app.status.operationState.phase in ['Failed']
+      send: [rollout-aborted]
+
+  # Default triggers for all applications
+  defaultTriggers: |
+    - on-sync-succeeded
+    - on-sync-failed
+    - on-health-degraded
+
+  # Subscriptions - which apps send to which channels
+  subscriptions: |
+    - recipients:
+        - slack:sportstix-deploy
+      triggers:
+        - on-sync-succeeded
+        - on-sync-failed
+        - on-health-degraded
+        - on-rollout-completed
+        - on-rollout-aborted
+---
+# Secret placeholder for Slack token
+# In production, use ESO (ExternalSecret) to sync from AWS Secrets Manager
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-notifications-secret
+  namespace: argocd
+type: Opaque
+stringData:
+  slack-token: "xoxb-PLACEHOLDER-replace-with-actual-token"
+  slack-signing-secret: "PLACEHOLDER-replace-with-actual-secret"
