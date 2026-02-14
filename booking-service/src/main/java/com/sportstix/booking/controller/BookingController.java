@@ -4,6 +4,8 @@ import com.sportstix.booking.dto.request.HoldSeatsRequest;
 import com.sportstix.booking.dto.response.BookingResponse;
 import com.sportstix.booking.service.BookingService;
 import com.sportstix.common.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Booking", description = "Seat reservation and booking management")
 @RestController
 @RequestMapping("/api/v1/bookings")
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ public class BookingController {
 
     private final BookingService bookingService;
 
+    @Operation(summary = "Hold seats", description = "Reserve seats with 3-tier lock (Redis + DB pessimistic + optimistic)")
     @PostMapping("/hold")
     public ResponseEntity<ApiResponse<BookingResponse>> holdSeats(
             @RequestHeader("X-User-Id") Long userId,
@@ -28,6 +32,7 @@ public class BookingController {
                 .body(ApiResponse.ok(BookingResponse.from(booking)));
     }
 
+    @Operation(summary = "Confirm booking", description = "Confirm a pending booking (triggers SAGA payment flow)")
     @PostMapping("/{bookingId}/confirm")
     public ResponseEntity<ApiResponse<BookingResponse>> confirmBooking(
             @PathVariable Long bookingId,
@@ -36,6 +41,7 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.ok(BookingResponse.from(booking)));
     }
 
+    @Operation(summary = "Cancel booking", description = "Cancel a booking and release held seats")
     @PostMapping("/{bookingId}/cancel")
     public ResponseEntity<ApiResponse<BookingResponse>> cancelBooking(
             @PathVariable Long bookingId,
@@ -44,6 +50,7 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.ok(BookingResponse.from(booking)));
     }
 
+    @Operation(summary = "Get booking", description = "Get booking details by ID")
     @GetMapping("/{bookingId}")
     public ResponseEntity<ApiResponse<BookingResponse>> getBooking(
             @PathVariable Long bookingId,
@@ -52,6 +59,7 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.ok(BookingResponse.from(booking)));
     }
 
+    @Operation(summary = "List user bookings", description = "Get all bookings for the authenticated user")
     @GetMapping
     public ResponseEntity<ApiResponse<List<BookingResponse>>> getUserBookings(
             @RequestHeader("X-User-Id") Long userId) {
