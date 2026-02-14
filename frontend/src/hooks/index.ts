@@ -7,4 +7,9 @@ export {
   useQueueWebSocket,
 } from "./use-queue";
 export { useGameSeats, useHoldSeats } from "./use-seats";
-export { useBooking, useConfirmBooking, useCancelBooking } from "./use-booking";
+export {
+  useUserBookings,
+  useBooking,
+  useConfirmBooking,
+  useCancelBooking,
+} from "./use-booking";
