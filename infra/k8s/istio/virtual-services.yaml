@@ -1,0 +1,53 @@
+# WebSocket VirtualServices with infinite timeout
+# Required for long-lived WebSocket connections through Istio sidecar
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: queue-ws
+  namespace: sportstix
+spec:
+  hosts:
+    - queue.sportstix.svc.cluster.local
+  http:
+    # WebSocket route (must be before default)
+    - match:
+        - uri:
+            prefix: /ws/queue
+      route:
+        - destination:
+            host: queue.sportstix.svc.cluster.local
+            port:
+              number: 8083
+      timeout: 0s
+    # Default HTTP route
+    - route:
+        - destination:
+            host: queue.sportstix.svc.cluster.local
+            port:
+              number: 8083
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: booking-ws
+  namespace: sportstix
+spec:
+  hosts:
+    - booking.sportstix.svc.cluster.local
+  http:
+    # WebSocket route
+    - match:
+        - uri:
+            prefix: /ws/booking
+      route:
+        - destination:
+            host: booking.sportstix.svc.cluster.local
+            port:
+              number: 8084
+      timeout: 0s
+    # Default HTTP route
+    - route:
+        - destination:
+            host: booking.sportstix.svc.cluster.local
+            port:
+              number: 8084

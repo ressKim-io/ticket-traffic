@@ -14,6 +14,8 @@ spec:
       app.kubernetes.io/name: frontend
   template:
     metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
       labels:
         app.kubernetes.io/name: frontend
         app.kubernetes.io/part-of: sportstix
@@ -51,10 +53,10 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
+              memory: 256Mi
             limits:
               cpu: 300m
-              memory: 256Mi
+              memory: 384Mi
           readinessProbe:
             httpGet:
               path: /

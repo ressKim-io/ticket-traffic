@@ -30,6 +30,34 @@ spec:
         - port: 53
           protocol: TCP
 ---
+# Allow Istio sidecar communication (istiod, sidecar proxy ports)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-istio-egress
+  namespace: sportstix
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # istiod (xDS config, certificate rotation)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+      ports:
+        - port: 15012
+          protocol: TCP
+    # Sidecar inbound/outbound (localhost communication)
+    - to:
+        - podSelector: {}
+      ports:
+        - port: 15001
+          protocol: TCP
+        - port: 15006
+          protocol: TCP
+---
 # All services -> OTel Collector in observability namespace (traces)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

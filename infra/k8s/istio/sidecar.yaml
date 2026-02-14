@@ -1,0 +1,13 @@
+# Limit sidecar scope to reduce memory/CPU and xDS config size
+# Each service only needs to know about its direct dependencies
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: sportstix
+spec:
+  egress:
+    - hosts:
+        - "./*"
+        - "istio-system/*"
+        - "observability/*"

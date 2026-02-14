@@ -14,10 +14,13 @@ spec:
       app.kubernetes.io/name: booking
   template:
     metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
       labels:
         app.kubernetes.io/name: booking
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: booking
+        sportstix.io/tier: backend
     spec:
       serviceAccountName: booking-sa
       automountServiceAccountToken: false
@@ -56,10 +59,10 @@ spec:
           resources:
             requests:
               cpu: 200m
-              memory: 512Mi
+              memory: 640Mi
             limits:
               cpu: "1"
-              memory: 640Mi
+              memory: 768Mi
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness

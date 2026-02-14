@@ -1,0 +1,9 @@
+# Enforce STRICT mTLS for all services in sportstix namespace
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: sportstix
+spec:
+  mtls:
+    mode: STRICT
