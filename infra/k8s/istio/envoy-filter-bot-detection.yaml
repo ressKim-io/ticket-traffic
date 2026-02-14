@@ -1,0 +1,56 @@
+# Bot detection at Istio IngressGateway
+# Replaces Gateway Service BotPreventionFilter (User-Agent checks)
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: bot-detection
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.lua.bot_detection
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            inline_code: |
+              -- Blocked User-Agent patterns (case-insensitive)
+              local blocked_patterns = {
+                "curl", "wget", "python%-requests", "python%-urllib",
+                "selenium", "phantomjs", "headlesschrome", "scrapy",
+                "httpclient", "java/"
+              }
+
+              function envoy_on_request(request_handle)
+                local ua = request_handle:headers():get("user-agent")
+                if ua == nil or ua == "" then
+                  request_handle:respond(
+                    {[":status"] = "403"},
+                    '{"error":"Forbidden","message":"User-Agent header required"}'
+                  )
+                  return
+                end
+
+                local ua_lower = string.lower(ua)
+                for _, pattern in ipairs(blocked_patterns) do
+                  if string.find(ua_lower, pattern) then
+                    request_handle:respond(
+                      {[":status"] = "403"},
+                      '{"error":"Forbidden","message":"Automated access detected"}'
+                    )
+                    return
+                  end
+                end
+              end
