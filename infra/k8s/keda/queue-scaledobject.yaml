@@ -1,0 +1,46 @@
+# KEDA ScaledObject for queue service
+# Scales based on Redis sorted set cardinality + CPU + memory
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: queue-scaledobject
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/name: queue
+    app.kubernetes.io/part-of: sportstix
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: queue
+  minReplicaCount: 2
+  maxReplicaCount: 10
+  pollingInterval: 15
+  cooldownPeriod: 300
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 15
+          policies:
+            - type: Percent
+              value: 200
+              periodSeconds: 15
+        scaleDown:
+          stabilizationWindowSeconds: 300
+  triggers:
+    - type: redis
+      metadata:
+        address: redis.sportstix.svc.cluster.local:6379
+        listName: queue:active
+        listLength: "500"
+      authenticationRef:
+        name: redis-trigger-auth
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "60"
+    - type: memory
+      metricType: Utilization
+      metadata:
+        value: "75"
