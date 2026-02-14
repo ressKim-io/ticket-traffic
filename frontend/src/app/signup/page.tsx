@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Input, Button } from "@/components/ui";
+import { GuestGuard } from "@/components/auth";
 import { useSignup } from "@/hooks";
 import type { ApiError } from "@/types";
 import { AxiosError } from "axios";
@@ -48,6 +49,7 @@ export default function SignupPage() {
         : null;
 
   return (
+    <GuestGuard>
     <div className="flex min-h-[70vh] items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <h1 className="text-center text-2xl font-bold text-gray-900">
@@ -121,5 +123,6 @@ export default function SignupPage() {
         </form>
       </div>
     </div>
+    </GuestGuard>
   );
 }

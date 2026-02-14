@@ -34,7 +34,7 @@ export function useLogin() {
             id: payload.sub ? Number(payload.sub) : 0,
             email: payload.email ?? "",
             name: payload.name ?? "",
-            role: payload.role ?? "USER",
+            role: payload.role === "ADMIN" ? "ADMIN" : "USER",
           });
         }
         router.push("/games");
