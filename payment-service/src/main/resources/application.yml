@@ -47,3 +47,32 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+  health:
+    circuitbreakers:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        registerHealthIndicator: true
+    instances:
+      kafkaProducer:
+        baseConfig: default
+        slidingWindowSize: 20
+        waitDurationInOpenState: 15s
+  retry:
+    instances:
+      kafkaProducer:
+        maxAttempts: 3
+        waitDuration: 1s
+        retryExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
