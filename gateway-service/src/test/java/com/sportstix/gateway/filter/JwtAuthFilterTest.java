@@ -1,7 +1,7 @@
 package com.sportstix.gateway.filter;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -13,8 +13,10 @@ import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
@@ -24,13 +26,26 @@ import static org.mockito.Mockito.*;
 
 class JwtAuthFilterTest {
 
-    private static final String SECRET = "sportstix-default-secret-key-for-development-only-32bytes!";
+    private static String publicKeyPem;
+    private static PrivateKey privateKey;
     private JwtAuthFilter filter;
     private GatewayFilterChain chain;
 
+    @BeforeAll
+    static void generateKeyPair() throws Exception {
+        KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+        gen.initialize(2048);
+        KeyPair keyPair = gen.generateKeyPair();
+        privateKey = keyPair.getPrivate();
+
+        publicKeyPem = "-----BEGIN PUBLIC KEY-----\n"
+                + Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded())
+                + "\n-----END PUBLIC KEY-----";
+    }
+
     @BeforeEach
     void setUp() {
-        filter = new JwtAuthFilter(SECRET, List.of("/api/v1/auth/login", "/api/v1/auth/signup", "/actuator/**"));
+        filter = new JwtAuthFilter(publicKeyPem, List.of("/api/v1/auth/login", "/api/v1/auth/signup", "/actuator/**"));
         chain = mock(GatewayFilterChain.class);
         when(chain.filter(any())).thenReturn(Mono.empty());
     }
@@ -138,12 +153,11 @@ class JwtAuthFilterTest {
 
     @Test
     void tokenWithoutRole_shouldReturn401() {
-        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
         String token = Jwts.builder()
                 .subject("123")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 60000))
-                .signWith(key)
+                .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
 
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -167,13 +181,12 @@ class JwtAuthFilterTest {
     }
 
     private String createToken(String subject, String role, long expirationOffsetMs) {
-        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()
                 .subject(subject)
                 .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationOffsetMs))
-                .signWith(key)
+                .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
     }
 }

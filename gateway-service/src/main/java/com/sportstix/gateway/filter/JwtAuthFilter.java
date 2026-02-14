@@ -4,7 +4,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -18,7 +17,10 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.List;
 
 @Slf4j
@@ -34,10 +36,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private final List<String> publicPaths;
 
     public JwtAuthFilter(
-            @Value("${gateway.jwt.secret}") String secret,
+            @Value("${gateway.jwt.public-key}") String publicKeyPem,
             @Value("${gateway.jwt.public-paths}") List<String> publicPaths) {
         this.jwtParser = Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
+                .verifyWith(parsePublicKey(publicKeyPem))
                 .build();
         this.publicPaths = publicPaths;
     }
@@ -100,5 +102,19 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
         return exchange.getResponse().setComplete();
+    }
+
+    private static PublicKey parsePublicKey(String pem) {
+        try {
+            String base64 = pem
+                    .replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s+", "");
+            byte[] decoded = Base64.getDecoder().decode(base64);
+            X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
+            return KeyFactory.getInstance("RSA").generatePublic(spec);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse RSA public key", e);
+        }
     }
 }
