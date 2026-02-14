@@ -36,7 +36,7 @@ public class BookingEventConsumer {
                 event.getUserId(),
                 event.getGameId(),
                 "PENDING",
-                null
+                event.getTotalPrice()
         );
         localBookingRepository.save(localBooking);
         log.info("Created local booking replica: bookingId={}", event.getBookingId());
