@@ -1,0 +1,35 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to rollback (e.g., auth-service, frontend)'
+        required: true
+        type: choice
+        options:
+          - gateway-service
+          - auth-service
+          - game-service
+          - queue-service
+          - booking-service
+          - payment-service
+          - admin-service
+          - frontend
+      revision:
+        description: 'Git SHA or ArgoCD revision to rollback to'
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rollback via ArgoCD
+        run: |
+          echo "Rolling back ${{ inputs.service }} to revision ${{ inputs.revision }}"
+          echo "In production, this would execute:"
+          echo "  argocd app set sportstix --kustomize-image sportstix/${{ inputs.service }}=${{ vars.ECR_REGISTRY }}/sportstix/${{ inputs.service }}:${{ inputs.revision }}"
+          echo "  argocd app sync sportstix --prune"
+          echo ""
+          echo "Alternative: ArgoCD UI -> Applications -> sportstix -> History -> Rollback"
