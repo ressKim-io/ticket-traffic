@@ -1,5 +1,6 @@
 # NetworkChaos: gateway to backend latency injection
 # Tests Istio outlier detection and circuit breaking
+# Validates: SLO latency budget, Istio retry policy, client timeout handling
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
@@ -8,6 +9,10 @@ metadata:
   labels:
     app.kubernetes.io/part-of: sportstix
     chaos-mesh.org/experiment-type: network-delay
+  annotations:
+    chaos-mesh.org/description: "Inject 200ms latency from gateway to backend services"
+    chaos-mesh.org/expected-impact: "SLO latency budget consumption, Istio outlier ejection"
+    chaos-mesh.org/rollback: "Experiment auto-recovers after duration expires"
 spec:
   action: delay
   mode: all
@@ -30,44 +35,53 @@ spec:
     mode: all
   duration: "120s"
 ---
-# NetworkChaos: booking to PostgreSQL network partition
-# Tests HikariCP connection pool alerting and recovery
+# NetworkChaos: booking egress latency (simulates DB slowness)
+# Tests HikariCP connection timeout, circuit breaker, fallback behavior
+# Works regardless of DB deployment type (self-hosted Pod or managed RDS)
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: booking-db-partition
+  name: booking-egress-latency
   namespace: sportstix
   labels:
     app.kubernetes.io/part-of: sportstix
-    chaos-mesh.org/experiment-type: network-partition
+    chaos-mesh.org/experiment-type: network-delay
+  annotations:
+    chaos-mesh.org/description: "Inject 2s latency on booking egress to simulate DB/infra slowness"
+    chaos-mesh.org/expected-impact: "HikariCP timeout, connection pool exhaustion alert"
+    chaos-mesh.org/rollback: "Experiment auto-recovers after duration expires"
 spec:
-  action: partition
+  action: delay
   mode: all
   selector:
     namespaces:
       - sportstix
     labelSelectors:
       app.kubernetes.io/name: booking
+  delay:
+    latency: "2000ms"
+    jitter: "500ms"
+    correlation: "50"
   direction: to
-  target:
-    selector:
-      namespaces:
-        - sportstix
-      labelSelectors:
-        app.kubernetes.io/name: postgres
-    mode: all
+  externalTargets:
+    - "postgres.sportstix.svc.cluster.local"
   duration: "60s"
 ---
-# NetworkChaos: payment to Kafka packet loss
-# Tests Kafka retry and idempotency mechanisms
+# NetworkChaos: payment egress packet loss (simulates Kafka unreliability)
+# Tests Kafka producer retry, idempotency, and DLQ mechanisms
+# Works regardless of Kafka deployment type (self-hosted Pod or managed MSK)
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: payment-packet-loss
+  name: payment-egress-loss
   namespace: sportstix
   labels:
     app.kubernetes.io/part-of: sportstix
     chaos-mesh.org/experiment-type: network-loss
+  annotations:
+    chaos-mesh.org/description: "Inject 10% packet loss on payment egress to Kafka"
+    chaos-mesh.org/expected-impact: "Kafka retry activation, DLQ routing, idempotency validation"
+    chaos-mesh.org/rollback: "Experiment auto-recovers after duration expires"
 spec:
   action: loss
   mode: all
@@ -80,11 +94,6 @@ spec:
     loss: "10"
     correlation: "25"
   direction: to
-  target:
-    selector:
-      namespaces:
-        - sportstix
-      labelSelectors:
-        app.kubernetes.io/name: kafka
-    mode: all
+  externalTargets:
+    - "kafka.sportstix.svc.cluster.local"
   duration: "120s"

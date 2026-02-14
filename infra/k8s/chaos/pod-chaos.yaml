@@ -8,6 +8,10 @@ metadata:
   labels:
     app.kubernetes.io/part-of: sportstix
     chaos-mesh.org/experiment-type: pod-kill
+  annotations:
+    chaos-mesh.org/description: "Kill one booking pod to validate PDB and KEDA auto-recovery"
+    chaos-mesh.org/expected-impact: "1 pod terminated, KEDA should restore within 60s"
+    chaos-mesh.org/rollback: "Kubernetes recreates pod automatically via ReplicaSet"
 spec:
   action: pod-kill
   mode: one
@@ -28,6 +32,10 @@ metadata:
   labels:
     app.kubernetes.io/part-of: sportstix
     chaos-mesh.org/experiment-type: pod-kill
+  annotations:
+    chaos-mesh.org/description: "Kill one payment pod to validate PDB and recovery"
+    chaos-mesh.org/expected-impact: "1 pod terminated, Deployment recreates within 30s"
+    chaos-mesh.org/rollback: "Kubernetes recreates pod automatically via ReplicaSet"
 spec:
   action: pod-kill
   mode: one
@@ -47,6 +55,10 @@ metadata:
   labels:
     app.kubernetes.io/part-of: sportstix
     chaos-mesh.org/experiment-type: pod-failure
+  annotations:
+    chaos-mesh.org/description: "Inject container failure on booking for 60s"
+    chaos-mesh.org/expected-impact: "Container CrashLoopBackOff, then auto-recovery"
+    chaos-mesh.org/rollback: "Experiment auto-recovers after duration expires"
 spec:
   action: pod-failure
   mode: one
