@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { AuthGuard } from "@/components/auth";
 import { CountdownTimer } from "@/components/payment";
 import { useBooking, useConfirmBooking, useCancelBooking } from "@/hooks";
@@ -11,32 +12,44 @@ import { getErrorMessage } from "@/lib";
 function PaymentContent() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const id = Number(bookingId);
   const isValidId = !!bookingId && !isNaN(id) && id > 0;
 
   const [expired, setExpired] = useState(false);
 
-  const { data, isLoading, isError, error } = useBooking(isValidId ? id : 0);
+  const { data, isLoading, isError, error } = useBooking(isValidId ? id : 0, {
+    enabled: !expired,
+  });
   const booking = data?.data;
 
   const confirmMutation = useConfirmBooking();
   const cancelMutation = useCancelBooking();
 
-  const handleConfirm = useCallback(() => {
-    if (!isValidId) return;
-    confirmMutation.mutate(id);
-  }, [id, isValidId, confirmMutation]);
+  useEffect(() => {
+    document.title = "Complete Payment | SportsTix";
+  }, []);
 
-  const handleCancel = useCallback(() => {
-    if (!isValidId) return;
+  const handleConfirm = () => {
+    if (!isValidId || confirmMutation.isPending) return;
+    confirmMutation.mutate(id);
+  };
+
+  const handleCancel = () => {
+    if (!isValidId || cancelMutation.isPending) return;
     cancelMutation.mutate(id, {
-      onSuccess: () => router.push("/games"),
+      onSuccess: (res) => {
+        if (res.success) {
+          router.push("/games");
+        }
+      },
     });
-  }, [id, isValidId, cancelMutation, router]);
+  };
 
   const handleExpire = useCallback(() => {
     setExpired(true);
-  }, []);
+    queryClient.cancelQueries({ queryKey: ["booking", id] });
+  }, [id, queryClient]);
 
   if (!isValidId) {
     return (

@@ -7,7 +7,10 @@ import type { ApiResponse, BookingResponse } from "@/types";
 /**
  * Fetch booking details by ID.
  */
-export function useBooking(bookingId: number) {
+export function useBooking(
+  bookingId: number,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ["booking", bookingId],
     queryFn: async () => {
@@ -16,7 +19,7 @@ export function useBooking(bookingId: number) {
       );
       return data;
     },
-    enabled: bookingId > 0,
+    enabled: bookingId > 0 && options?.enabled !== false,
     refetchInterval: (query) => {
       // Poll while PENDING to detect expiration or external confirmation
       const booking = query.state.data?.data;
