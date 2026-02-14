@@ -1,0 +1,59 @@
+# Extract JWT claims into X-User-Id and X-User-Role headers
+# Replaces Gateway Service's header injection logic
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: jwt-claim-headers
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.lua.jwt_headers
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            inline_code: |
+              function envoy_on_request(request_handle)
+                -- Strip any externally-set identity headers (anti-spoofing)
+                request_handle:headers():remove("X-User-Id")
+                request_handle:headers():remove("X-User-Role")
+
+                -- Read JWT payload injected by RequestAuthentication
+                local payload_header = request_handle:headers():get("x-jwt-payload")
+                if payload_header == nil or payload_header == "" then
+                  return
+                end
+
+                -- Decode base64 JWT payload
+                local decoded = request_handle:base64Escape(payload_header)
+                if decoded == nil then
+                  return
+                end
+
+                -- Extract claims using pattern matching
+                local sub = string.match(payload_header, '"sub":"([^"]*)"')
+                local role = string.match(payload_header, '"role":"([^"]*)"')
+
+                if sub then
+                  request_handle:headers():add("X-User-Id", sub)
+                end
+                if role then
+                  request_handle:headers():add("X-User-Role", role)
+                end
+
+                -- Remove the raw payload header before forwarding
+                request_handle:headers():remove("x-jwt-payload")
+              end
