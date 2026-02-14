@@ -3,6 +3,9 @@ plugins {
 }
 
 // common is a library, not a bootable application
+configurations {
+    implementation.exclude group: 'org.springdoc', module: 'springdoc-openapi-starter-webmvc-ui'
+}
 
 dependencies {
     api 'org.springframework.boot:spring-boot-starter-web'
