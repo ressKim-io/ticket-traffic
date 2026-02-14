@@ -155,4 +155,9 @@ public class BookingService {
 
         return booking;
     }
+
+    @Transactional(readOnly = true)
+    public List<Booking> getUserBookings(Long userId) {
+        return bookingRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
 }

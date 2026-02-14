@@ -14,4 +14,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             BookingStatus status, LocalDateTime expiry, Pageable pageable);
 
     long countByUserIdAndGameIdAndStatusIn(Long userId, Long gameId, List<BookingStatus> statuses);
+
+    List<Booking> findByUserIdOrderByCreatedAtDesc(Long userId);
 }
