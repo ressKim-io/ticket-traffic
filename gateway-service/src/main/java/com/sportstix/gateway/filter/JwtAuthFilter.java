@@ -104,6 +104,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         return exchange.getResponse().setComplete();
     }
 
+    // Intentionally duplicated from auth-service: gateway is WebFlux and cannot depend on common module (servlet-based)
     private static PublicKey parsePublicKey(String pem) {
         try {
             String base64 = pem
