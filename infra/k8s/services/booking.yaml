@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/name: booking
+    app.kubernetes.io/part-of: sportstix
+    app.kubernetes.io/component: booking
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: booking
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: booking
+        app.kubernetes.io/part-of: sportstix
+        app.kubernetes.io/component: booking
+    spec:
+      containers:
+        - name: booking
+          image: sportstix/booking-service:latest
+          ports:
+            - containerPort: 8084
+              name: http
+          envFrom:
+            - configMapRef:
+                name: sportstix-common
+            - configMapRef:
+                name: booking-config
+            - secretRef:
+                name: db-secret
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8084
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+            initialDelaySeconds: 45
+            periodSeconds: 15
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            failureThreshold: 30
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/name: booking
+    app.kubernetes.io/part-of: sportstix
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: booking
+  ports:
+    - port: 8084
+      targetPort: http
+      protocol: TCP
+      name: http
