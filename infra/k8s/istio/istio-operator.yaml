@@ -1,0 +1,53 @@
+# Istio installation configuration
+# Install with: istioctl install -f istio-operator.yaml
+# NGINX Ingress handles north-south, Istio handles east-west only
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: sportstix-istio
+  namespace: istio-system
+spec:
+  profile: default
+  meshConfig:
+    accessLogFile: /dev/stdout
+    accessLogEncoding: JSON
+    defaultConfig:
+      holdApplicationUntilProxyStarts: true
+      tracing:
+        zipkin:
+          address: otel-collector.observability.svc.cluster.local:9411
+    enableTracing: true
+    outboundTrafficPolicy:
+      mode: REGISTRY_ONLY
+  components:
+    # Disable Istio IngressGateway - NGINX Ingress handles north-south
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: false
+    egressGateways:
+      - name: istio-egressgateway
+        enabled: false
+    pilot:
+      k8s:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        hpaSpec:
+          minReplicas: 1
+          maxReplicas: 3
+  values:
+    global:
+      proxy:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+    sidecarInjectorWebhook:
+      rewriteAppHTTPProbe: true
