@@ -61,6 +61,7 @@ management:
 
 resilience4j:
   circuitbreaker:
+    circuitBreakerAspectOrder: 3
     configs:
       default:
         slidingWindowType: COUNT_BASED
@@ -80,21 +81,24 @@ resilience4j:
         baseConfig: default
         failureRateThreshold: 60
         waitDurationInOpenState: 10s
-  retry:
-    configs:
-      default:
-        maxAttempts: 3
-        waitDuration: 500ms
-        retryExceptions:
+        ignoreExceptions:
+          - com.sportstix.common.exception.BusinessException
+        recordExceptions:
+          - org.redisson.client.RedisException
+          - java.net.ConnectException
           - java.io.IOException
-          - java.util.concurrent.TimeoutException
+  retry:
+    retryAspectOrder: 4
     instances:
       kafkaProducer:
-        baseConfig: default
         maxAttempts: 3
-        waitDuration: 1s
-  bulkhead:
-    instances:
-      booking:
-        maxConcurrentCalls: 50
-        maxWaitDuration: 500ms
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        enableRandomizedWait: true
+        randomizedWaitFactor: 0.5
+        retryExceptions:
+          - java.lang.RuntimeException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - java.util.concurrent.ExecutionException
