@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falco
+  namespace: argocd
+spec:
+  project: sportstix
+  source:
+    repoURL: https://falcosecurity.github.io/charts
+    chart: falco
+    targetRevision: 4.16.1
+    helm:
+      releaseName: falco
+      values: |
+        driver:
+          kind: modern_ebpf
+        falcosidekick:
+          enabled: true
+          config:
+            slack:
+              webhookurl: ""
+              channel: "#sportstix-security"
+              minimumpriority: "warning"
+        metrics:
+          enabled: true
+          service:
+            enabled: true
+        serviceMonitor:
+          enabled: true
+          namespace: observability
+        customRules:
+          sportstix-rules.yaml: |-
+            - rule: Unexpected process in sportstix container
+              desc: Detect unexpected process execution in sportstix service containers
+              condition: >
+                spawned_process and container and
+                k8s.ns.name = "sportstix" and
+                not proc.name in (java, node, sh, bash, sleep, cat, ls, grep, curl, wget) and
+                not proc.name startswith "opentelemetry"
+              output: >
+                Unexpected process in sportstix container
+                (user=%user.name command=%proc.cmdline container=%container.name
+                pod=%k8s.pod.name namespace=%k8s.ns.name image=%container.image.repository)
+              priority: WARNING
+              tags: [sportstix, process]
+
+            - rule: Database credential file access
+              desc: Detect access to database credential files in sportstix containers
+              condition: >
+                open_read and container and
+                k8s.ns.name = "sportstix" and
+                (fd.name contains "password" or fd.name contains "credential" or fd.name contains ".env")
+              output: >
+                Sensitive file accessed in sportstix container
+                (user=%user.name file=%fd.name container=%container.name
+                pod=%k8s.pod.name namespace=%k8s.ns.name)
+              priority: WARNING
+              tags: [sportstix, sensitive_data]
+
+            - rule: Outbound connection to unexpected port
+              desc: Detect outbound connections to non-standard ports from sportstix
+              condition: >
+                outbound and container and
+                k8s.ns.name = "sportstix" and
+                not fd.sport in (80, 443, 5432, 6379, 8080, 8081, 8082, 8083, 8084, 8085, 8086, 9092, 3000, 53) and
+                not fd.sport >= 32768
+              output: >
+                Unexpected outbound connection from sportstix
+                (user=%user.name command=%proc.cmdline connection=%fd.name
+                pod=%k8s.pod.name namespace=%k8s.ns.name port=%fd.sport)
+              priority: NOTICE
+              tags: [sportstix, network]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: falco
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
