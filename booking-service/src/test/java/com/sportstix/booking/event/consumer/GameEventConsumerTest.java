@@ -2,10 +2,12 @@ package com.sportstix.booking.event.consumer;
 
 import com.sportstix.booking.domain.LocalGame;
 import com.sportstix.booking.domain.LocalGameSeat;
+import com.sportstix.booking.event.IdempotencyService;
 import com.sportstix.booking.repository.LocalGameRepository;
 import com.sportstix.booking.repository.LocalGameSeatRepository;
 import com.sportstix.common.event.GameInfoUpdatedEvent;
 import com.sportstix.common.event.SeatInitializedEvent;
+import com.sportstix.common.event.Topics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -20,9 +22,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class GameEventConsumerTest {
@@ -34,6 +36,8 @@ class GameEventConsumerTest {
     private LocalGameRepository localGameRepository;
     @Mock
     private LocalGameSeatRepository localGameSeatRepository;
+    @Mock
+    private IdempotencyService idempotencyService;
 
     @Test
     void handleSeatInitialized_createsGameAndSeats() {
@@ -47,6 +51,7 @@ class GameEventConsumerTest {
                         new SeatInitializedEvent.SeatInfo(101L, 11L, 1L, BigDecimal.valueOf(50000), "A", 2)
                 )
         );
+        given(idempotencyService.isDuplicate(event.getEventId(), Topics.GAME_SEAT_INITIALIZED)).willReturn(false);
         given(localGameRepository.findById(1L)).willReturn(Optional.empty());
         given(localGameRepository.save(any(LocalGame.class))).willAnswer(inv -> inv.getArgument(0));
 
@@ -58,6 +63,7 @@ class GameEventConsumerTest {
         ArgumentCaptor<List<LocalGameSeat>> seatCaptor = ArgumentCaptor.forClass(List.class);
         verify(localGameSeatRepository).saveAll(seatCaptor.capture());
         assertThat(seatCaptor.getValue()).hasSize(2);
+        verify(idempotencyService).markProcessed(event.getEventId(), Topics.GAME_SEAT_INITIALIZED);
     }
 
     @Test
@@ -70,6 +76,7 @@ class GameEventConsumerTest {
                 LocalDateTime.of(2025, 3, 10, 10, 0),
                 "OPEN", 2, List.of()
         );
+        given(idempotencyService.isDuplicate(event.getEventId(), Topics.GAME_SEAT_INITIALIZED)).willReturn(false);
         given(localGameRepository.findById(1L)).willReturn(Optional.of(existing));
         given(localGameRepository.save(any(LocalGame.class))).willAnswer(inv -> inv.getArgument(0));
 
@@ -82,6 +89,23 @@ class GameEventConsumerTest {
     }
 
     @Test
+    void handleSeatInitialized_duplicate_skipped() {
+        SeatInitializedEvent event = new SeatInitializedEvent(
+                1L, "Home", "Away",
+                LocalDateTime.of(2025, 3, 15, 19, 0),
+                LocalDateTime.of(2025, 3, 10, 10, 0),
+                "SCHEDULED", 4, List.of()
+        );
+        given(idempotencyService.isDuplicate(event.getEventId(), Topics.GAME_SEAT_INITIALIZED)).willReturn(true);
+
+        consumer.handleSeatInitialized(event);
+
+        verify(localGameRepository, never()).save(any());
+        verify(localGameSeatRepository, never()).deleteByGameId(anyLong());
+        verify(idempotencyService, never()).markProcessed(any(), any());
+    }
+
+    @Test
     void handleGameInfoUpdated_createsNewReplica() {
         GameInfoUpdatedEvent event = new GameInfoUpdatedEvent(
                 2L, "TeamA", "TeamB",
@@ -89,6 +113,7 @@ class GameEventConsumerTest {
                 LocalDateTime.of(2025, 3, 25, 10, 0),
                 "SCHEDULED", 4
         );
+        given(idempotencyService.isDuplicate(event.getEventId(), Topics.GAME_INFO_UPDATED)).willReturn(false);
         given(localGameRepository.findById(2L)).willReturn(Optional.empty());
 
         consumer.handleGameInfoUpdated(event);
@@ -97,6 +122,7 @@ class GameEventConsumerTest {
         verify(localGameRepository).save(captor.capture());
         assertThat(captor.getValue().getId()).isEqualTo(2L);
         assertThat(captor.getValue().getHomeTeam()).isEqualTo("TeamA");
+        verify(idempotencyService).markProcessed(event.getEventId(), Topics.GAME_INFO_UPDATED);
     }
 
     @Test
@@ -109,6 +135,7 @@ class GameEventConsumerTest {
                 LocalDateTime.of(2025, 3, 25, 10, 0),
                 "OPEN", 2
         );
+        given(idempotencyService.isDuplicate(event.getEventId(), Topics.GAME_INFO_UPDATED)).willReturn(false);
         given(localGameRepository.findById(2L)).willReturn(Optional.of(existing));
 
         consumer.handleGameInfoUpdated(event);
@@ -116,5 +143,22 @@ class GameEventConsumerTest {
         verify(localGameRepository).save(existing);
         assertThat(existing.getHomeTeam()).isEqualTo("NewA");
         assertThat(existing.getMaxTicketsPerUser()).isEqualTo(2);
+    }
+
+    @Test
+    void handleGameInfoUpdated_duplicate_skipped() {
+        GameInfoUpdatedEvent event = new GameInfoUpdatedEvent(
+                2L, "TeamA", "TeamB",
+                LocalDateTime.of(2025, 4, 1, 18, 0),
+                LocalDateTime.of(2025, 3, 25, 10, 0),
+                "SCHEDULED", 4
+        );
+        given(idempotencyService.isDuplicate(event.getEventId(), Topics.GAME_INFO_UPDATED)).willReturn(true);
+
+        consumer.handleGameInfoUpdated(event);
+
+        verify(localGameRepository, never()).findById(anyLong());
+        verify(localGameRepository, never()).save(any());
+        verify(idempotencyService, never()).markProcessed(any(), any());
     }
 }
