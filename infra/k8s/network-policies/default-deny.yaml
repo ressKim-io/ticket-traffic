@@ -1,0 +1,11 @@
+# Default deny all ingress traffic in sportstix namespace
+# Each service must explicitly allow its required traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: sportstix
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
