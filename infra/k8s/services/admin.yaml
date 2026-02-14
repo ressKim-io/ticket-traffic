@@ -19,6 +19,13 @@ spec:
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: admin
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: admin
       containers:
         - name: admin
           image: sportstix/admin-service:latest
