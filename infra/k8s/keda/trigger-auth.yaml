@@ -1,0 +1,33 @@
+# TriggerAuthentication for Kafka
+# Currently no SASL auth (dev/staging). For production, add:
+#   secretTargetRef:
+#     - parameter: sasl
+#       name: kafka-credentials
+#       key: sasl-mechanism
+#     - parameter: username
+#       name: kafka-credentials
+#       key: username
+#     - parameter: password
+#       name: kafka-credentials
+#       key: password
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: kafka-trigger-auth
+  namespace: sportstix
+spec:
+  secretTargetRef: []
+---
+# TriggerAuthentication for Redis
+# Currently no password auth (dev/staging). For production, add:
+#   secretTargetRef:
+#     - parameter: password
+#       name: redis-credentials
+#       key: redis-password
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: redis-trigger-auth
+  namespace: sportstix
+spec:
+  secretTargetRef: []

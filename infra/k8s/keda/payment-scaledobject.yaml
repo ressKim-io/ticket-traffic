@@ -1,0 +1,47 @@
+# KEDA ScaledObject for payment service
+# Scales based on Kafka consumer lag + CPU utilization
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: payment-scaledobject
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/name: payment
+    app.kubernetes.io/part-of: sportstix
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment
+  minReplicaCount: 2
+  maxReplicaCount: 6
+  pollingInterval: 15
+  cooldownPeriod: 300
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 60
+        scaleDown:
+          stabilizationWindowSeconds: 300
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.sportstix.svc.cluster.local:9092
+        consumerGroup: payment-service
+        topic: ticket.payment.completed
+        lagThreshold: "50"
+      authenticationRef:
+        name: kafka-trigger-auth
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.sportstix.svc.cluster.local:9092
+        consumerGroup: payment-service
+        topic: ticket.booking.confirmed
+        lagThreshold: "50"
+      authenticationRef:
+        name: kafka-trigger-auth
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "70"

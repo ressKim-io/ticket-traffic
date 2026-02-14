@@ -1,0 +1,51 @@
+# KEDA ScaledObject for booking service
+# Scales based on Kafka consumer lag + CPU utilization
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: booking-scaledobject
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/name: booking
+    app.kubernetes.io/part-of: sportstix
+spec:
+  scaleTargetRef:
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: booking
+  minReplicaCount: 2
+  maxReplicaCount: 8
+  pollingInterval: 15
+  cooldownPeriod: 300
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 30
+          policies:
+            - type: Percent
+              value: 200
+              periodSeconds: 15
+        scaleDown:
+          stabilizationWindowSeconds: 300
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.sportstix.svc.cluster.local:9092
+        consumerGroup: booking-service
+        topic: ticket.booking.created
+        lagThreshold: "100"
+      authenticationRef:
+        name: kafka-trigger-auth
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.sportstix.svc.cluster.local:9092
+        consumerGroup: booking-service
+        topic: ticket.seat.held
+        lagThreshold: "100"
+      authenticationRef:
+        name: kafka-trigger-auth
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "65"

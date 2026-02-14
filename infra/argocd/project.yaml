@@ -8,6 +8,7 @@ spec:
   sourceRepos:
     - 'https://github.com/ressKim-io/ticket-traffic.git'
     - 'https://argoproj.github.io/argo-helm'
+    - 'https://kedacore.github.io/charts'
   destinations:
     - namespace: sportstix
       server: https://kubernetes.default.svc
@@ -16,6 +17,8 @@ spec:
     - namespace: external-secrets
       server: https://kubernetes.default.svc
     - namespace: argo-rollouts
+      server: https://kubernetes.default.svc
+    - namespace: keda
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ''

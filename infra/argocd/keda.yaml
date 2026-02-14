@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keda
+  namespace: argocd
+spec:
+  project: sportstix
+  source:
+    repoURL: https://kedacore.github.io/charts
+    chart: keda
+    targetRevision: 2.16.1
+    helm:
+      releaseName: keda
+      values: |
+        operator:
+          replicaCount: 1
+        metricsServer:
+          replicaCount: 1
+        prometheus:
+          metricServer:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              namespace: observability
+          operator:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              namespace: observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keda
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
