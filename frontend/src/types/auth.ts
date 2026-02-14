@@ -22,3 +22,14 @@ export interface TokenResponse {
   tokenType: string;
   expiresIn?: number;
 }
+
+export interface MemberResponse {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+}
+
+export interface RefreshRequest {
+  refreshToken: string;
+}
