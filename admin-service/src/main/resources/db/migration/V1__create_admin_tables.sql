@@ -11,11 +11,10 @@ CREATE TABLE booking_stats (
     cancelled_bookings  INT NOT NULL DEFAULT 0,
     total_revenue       NUMERIC(15, 2) NOT NULL DEFAULT 0,
     total_refunds       NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    version     BIGINT NOT NULL DEFAULT 0,
     created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX idx_booking_stats_game_id ON booking_stats(game_id);
 
 -- Processed events for idempotency
 CREATE TABLE processed_events (
@@ -23,3 +22,5 @@ CREATE TABLE processed_events (
     topic       VARCHAR(128) NOT NULL,
     processed_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_processed_events_processed_at ON processed_events(processed_at);

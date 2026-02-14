@@ -39,6 +39,9 @@ public class BookingStats extends BaseTimeEntity {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal totalRefunds;
 
+    @Version
+    private Long version;
+
     public BookingStats(Long gameId) {
         this.gameId = gameId;
         this.totalBookings = 0;

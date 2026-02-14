@@ -6,8 +6,10 @@ import com.sportstix.admin.dto.response.DashboardResponse;
 import com.sportstix.admin.dto.response.GameStatsResponse;
 import com.sportstix.admin.repository.BookingStatsRepository;
 import com.sportstix.admin.repository.ProcessedEventRepository;
+import com.sportstix.common.event.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,82 +24,68 @@ public class AdminStatsService {
     private final BookingStatsRepository bookingStatsRepository;
     private final ProcessedEventRepository processedEventRepository;
 
-    /**
-     * Check if event already processed (idempotency).
-     */
-    public boolean isProcessed(String eventId) {
-        return processedEventRepository.existsById(eventId);
-    }
-
-    /**
-     * Mark event as processed.
-     */
-    @Transactional
-    public void markProcessed(String eventId, String topic) {
-        processedEventRepository.save(new ProcessedEvent(eventId, topic));
-    }
+    // ── Event handlers (single transaction per event) ──
 
     @Transactional
-    public void onBookingCreated(Long gameId, BigDecimal totalPrice) {
-        BookingStats stats = getOrCreateStats(gameId);
+    public void processBookingCreated(BookingEvent event) {
+        if (isDuplicate(event.getEventId())) return;
+        BookingStats stats = getOrCreateStats(event.getGameId());
         stats.incrementTotalBookings();
+        stats.addRevenue(event.getTotalPrice());
         bookingStatsRepository.save(stats);
-        log.debug("Booking created stats updated: gameId={}", gameId);
+        markProcessed(event.getEventId(), Topics.BOOKING_CREATED);
+        log.info("Booking created stats updated: gameId={}", event.getGameId());
     }
 
     @Transactional
-    public void onBookingConfirmed(Long gameId) {
-        BookingStats stats = getOrCreateStats(gameId);
+    public void processBookingConfirmed(BookingEvent event) {
+        if (isDuplicate(event.getEventId())) return;
+        BookingStats stats = getOrCreateStats(event.getGameId());
         stats.incrementConfirmed();
         bookingStatsRepository.save(stats);
-        log.debug("Booking confirmed stats updated: gameId={}", gameId);
+        markProcessed(event.getEventId(), Topics.BOOKING_CONFIRMED);
+        log.info("Booking confirmed stats updated: gameId={}", event.getGameId());
     }
 
     @Transactional
-    public void onBookingCancelled(Long gameId) {
-        BookingStats stats = getOrCreateStats(gameId);
+    public void processBookingCancelled(BookingEvent event) {
+        if (isDuplicate(event.getEventId())) return;
+        BookingStats stats = getOrCreateStats(event.getGameId());
         stats.incrementCancelled();
         bookingStatsRepository.save(stats);
-        log.debug("Booking cancelled stats updated: gameId={}", gameId);
+        markProcessed(event.getEventId(), Topics.BOOKING_CANCELLED);
+        log.info("Booking cancelled stats updated: gameId={}", event.getGameId());
     }
 
     @Transactional
-    public void onPaymentCompleted(Long gameId, BigDecimal amount) {
-        BookingStats stats = getOrCreateStats(gameId);
-        stats.addRevenue(amount);
-        bookingStatsRepository.save(stats);
-        log.debug("Payment completed stats updated: gameId={}", gameId);
+    public void processPaymentCompleted(PaymentEvent event) {
+        if (isDuplicate(event.getEventId())) return;
+        markProcessed(event.getEventId(), Topics.PAYMENT_COMPLETED);
+        log.info("Payment completed processed: paymentId={}", event.getPaymentId());
     }
 
     @Transactional
-    public void onPaymentRefunded(Long gameId, BigDecimal amount) {
-        BookingStats stats = getOrCreateStats(gameId);
-        stats.addRefund(amount);
-        bookingStatsRepository.save(stats);
-        log.debug("Payment refunded stats updated: gameId={}", gameId);
+    public void processPaymentRefunded(PaymentEvent event) {
+        if (isDuplicate(event.getEventId())) return;
+        markProcessed(event.getEventId(), Topics.PAYMENT_REFUNDED);
+        log.info("Payment refunded processed: paymentId={}", event.getPaymentId());
     }
 
     @Transactional
-    public void onGameInfoUpdated(Long gameId, String homeTeam, String awayTeam) {
-        BookingStats stats = getOrCreateStats(gameId);
-        stats.updateGameInfo(homeTeam, awayTeam);
+    public void processGameInfoUpdated(GameInfoUpdatedEvent event) {
+        if (isDuplicate(event.getEventId())) return;
+        BookingStats stats = getOrCreateStats(event.getGameId());
+        stats.updateGameInfo(event.getHomeTeam(), event.getAwayTeam());
         bookingStatsRepository.save(stats);
-        log.debug("Game info updated: gameId={}", gameId);
+        markProcessed(event.getEventId(), Topics.GAME_INFO_UPDATED);
+        log.info("Game info updated: gameId={}", event.getGameId());
     }
+
+    // ── Query methods ──
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard() {
-        int totalBookings = bookingStatsRepository.sumTotalBookings();
-        int confirmedBookings = bookingStatsRepository.sumConfirmedBookings();
-        BigDecimal totalRevenue = bookingStatsRepository.sumTotalRevenue();
-        long totalGames = bookingStatsRepository.count();
-
-        return new DashboardResponse(
-                totalBookings,
-                confirmedBookings,
-                totalRevenue != null ? totalRevenue : BigDecimal.ZERO,
-                totalGames
-        );
+        return bookingStatsRepository.getDashboardAggregates();
     }
 
     @Transactional(readOnly = true)
@@ -107,8 +95,30 @@ public class AdminStatsService {
                 .toList();
     }
 
+    // ── Helpers ──
+
+    private boolean isDuplicate(String eventId) {
+        if (processedEventRepository.existsById(eventId)) {
+            log.debug("Event already processed: {}", eventId);
+            return true;
+        }
+        return false;
+    }
+
+    private void markProcessed(String eventId, String topic) {
+        processedEventRepository.save(new ProcessedEvent(eventId, topic));
+    }
+
     private BookingStats getOrCreateStats(Long gameId) {
         return bookingStatsRepository.findByGameId(gameId)
-                .orElseGet(() -> bookingStatsRepository.save(new BookingStats(gameId)));
+                .orElseGet(() -> {
+                    try {
+                        return bookingStatsRepository.saveAndFlush(new BookingStats(gameId));
+                    } catch (DataIntegrityViolationException e) {
+                        return bookingStatsRepository.findByGameId(gameId)
+                                .orElseThrow(() -> new IllegalStateException(
+                                        "BookingStats for gameId=" + gameId + " disappeared"));
+                    }
+                });
     }
 }
