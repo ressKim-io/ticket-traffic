@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# Frontend (separate build context)
+frontend
+
+# Infrastructure & docs
+infra
+tmp
+.claude
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Build outputs
+**/build
+**/out
+**/.gradle
+
+# OS files
+.DS_Store
+Thumbs.db

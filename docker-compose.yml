@@ -31,15 +31,21 @@ services:
       args:
         SERVICE_NAME: gateway-service
     container_name: sportstix-gateway
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
       SPRING_DATA_REDIS_HOST: redis
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
     depends_on:
       redis:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 384m
 
   auth-service:
     build:
@@ -47,6 +53,7 @@ services:
       args:
         SERVICE_NAME: auth-service
     container_name: sportstix-auth
+    restart: unless-stopped
     ports:
       - "8081:8081"
     environment:
@@ -56,11 +63,16 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 384m
 
   game-service:
     build:
@@ -68,6 +80,7 @@ services:
       args:
         SERVICE_NAME: game-service
     container_name: sportstix-game
+    restart: unless-stopped
     ports:
       - "8082:8082"
     environment:
@@ -78,6 +91,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,6 +99,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 384m
 
   queue-service:
     build:
@@ -92,6 +110,7 @@ services:
       args:
         SERVICE_NAME: queue-service
     container_name: sportstix-queue
+    restart: unless-stopped
     ports:
       - "8083:8083"
     environment:
@@ -99,11 +118,16 @@ services:
       SERVER_PORT: 8083
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m"
     depends_on:
       redis:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   booking-service:
     build:
@@ -111,6 +135,7 @@ services:
       args:
         SERVICE_NAME: booking-service
     container_name: sportstix-booking
+    restart: unless-stopped
     ports:
       - "8084:8084"
     environment:
@@ -121,6 +146,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m"
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,6 +154,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   payment-service:
     build:
@@ -135,6 +165,7 @@ services:
       args:
         SERVICE_NAME: payment-service
     container_name: sportstix-payment
+    restart: unless-stopped
     ports:
       - "8085:8085"
     environment:
@@ -144,11 +175,16 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 384m
 
   admin-service:
     build:
@@ -156,6 +192,7 @@ services:
       args:
         SERVICE_NAME: admin-service
     container_name: sportstix-admin
+    restart: unless-stopped
     ports:
       - "8086:8086"
     environment:
@@ -165,11 +202,16 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx256m"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 384m
 
   # ============================================
   # Frontend
@@ -181,12 +223,17 @@ services:
         NEXT_PUBLIC_API_URL: http://gateway-service:8080
         NEXT_PUBLIC_WS_URL: ws://gateway-service:8080
     container_name: sportstix-frontend
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
     depends_on:
       - gateway-service
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
 volumes:
   postgres_data:
