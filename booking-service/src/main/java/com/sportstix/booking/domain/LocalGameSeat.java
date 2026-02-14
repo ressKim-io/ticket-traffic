@@ -45,6 +45,9 @@ public class LocalGameSeat implements Persistable<Long> {
     @Column(nullable = false)
     private LocalDateTime syncedAt;
 
+    @Version
+    private Integer version;
+
     @Transient
     private boolean isNew = true;
 
