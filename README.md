@@ -143,7 +143,7 @@ OpenAPI JSON: `http://localhost:{port}/v3/api-docs`
 
 **Auth** - `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`
 
-**Game** - `POST /api/v1/games`, `GET /api/v1/games/{id}`, `GET /api/v1/games`, `POST /api/v1/games/{id}/initialize-seats`
+**Game** - `POST /api/v1/games`, `GET /api/v1/games/{id}`, `GET /api/v1/games`, `GET /api/v1/games/{gameId}/seats`
 
 **Stadium** - `POST /api/v1/stadiums`, `GET /api/v1/stadiums/{id}`, `GET /api/v1/stadiums`
 
@@ -154,6 +154,17 @@ OpenAPI JSON: `http://localhost:{port}/v3/api-docs`
 **Payment** - `POST /api/v1/payments/bookings/{bookingId}/pay`, `POST /api/v1/payments/{id}/refund`, `GET /api/v1/payments/{id}`, `GET /api/v1/payments/bookings/{bookingId}`
 
 **Admin** - `GET /api/v1/admin/dashboard`, `GET /api/v1/admin/games/stats`
+
+### WebSocket Endpoints
+
+| Service | Endpoint | Protocol | Description |
+|---------|----------|----------|-------------|
+| Queue | `/ws/queue/**` | STOMP | Queue position updates |
+| Booking | `/ws/booking/**` | STOMP | Seat status updates |
+
+**Queue STOMP destinations:**
+- Send: `/app/queue/status/{gameId}` (header: `X-User-Id`)
+- Subscribe: `/user/topic/queue/status`
 
 ## Kafka Topics
 
