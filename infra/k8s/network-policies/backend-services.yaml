@@ -1,0 +1,125 @@
+# Auth Service: only from gateway
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-auth-ingress
+  namespace: sportstix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: auth
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+      ports:
+        - port: 8081
+          protocol: TCP
+---
+# Game Service: only from gateway
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-game-ingress
+  namespace: sportstix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: game
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+      ports:
+        - port: 8082
+          protocol: TCP
+---
+# Queue Service: only from gateway (REST + WebSocket)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-queue-ingress
+  namespace: sportstix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: queue
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+      ports:
+        - port: 8083
+          protocol: TCP
+---
+# Booking Service: only from gateway
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-booking-ingress
+  namespace: sportstix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: booking
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+      ports:
+        - port: 8084
+          protocol: TCP
+---
+# Payment Service: only from gateway
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-payment-ingress
+  namespace: sportstix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: payment
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+      ports:
+        - port: 8085
+          protocol: TCP
+---
+# Admin Service: only from gateway
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-admin-ingress
+  namespace: sportstix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: admin
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+      ports:
+        - port: 8086
+          protocol: TCP
