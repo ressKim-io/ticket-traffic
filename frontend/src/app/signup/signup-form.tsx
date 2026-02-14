@@ -2,28 +2,33 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Input, Button } from "@/components/ui";
 import { GuestGuard } from "@/components/auth";
-import { useLogin } from "@/hooks";
+import { useSignup } from "@/hooks";
 import { getErrorMessage } from "@/lib";
 
-export function LoginForm() {
-  const searchParams = useSearchParams();
-  const registered = searchParams.get("registered") === "true";
-
+export function SignupForm() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const login = useLogin();
+  const signup = useSignup();
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
+    if (!name) newErrors.name = "Name is required";
+    else if (name.length > 50)
+      newErrors.name = "Name must be 50 characters or less";
     if (!email) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       newErrors.email = "Invalid email format";
     if (!password) newErrors.password = "Password is required";
+    else if (password.length < 8)
+      newErrors.password = "Password must be at least 8 characters";
+    if (password !== confirmPassword)
+      newErrors.confirmPassword = "Passwords do not match";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -31,11 +36,11 @@ export function LoginForm() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    login.mutate({ email, password });
+    signup.mutate({ email, password, name });
   }
 
-  const serverError = login.error
-    ? getErrorMessage(login.error, "Login failed. Please try again.")
+  const serverError = signup.error
+    ? getErrorMessage(signup.error, "Signup failed. Please try again.")
     : null;
 
   return (
@@ -43,23 +48,17 @@ export function LoginForm() {
       <div className="flex min-h-[70vh] items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <h1 className="text-center text-2xl font-bold text-gray-900">
-            Sign in to SportsTix
+            Create your account
           </h1>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Don&apos;t have an account?{" "}
+            Already have an account?{" "}
             <Link
-              href="/signup"
+              href="/login"
               className="font-medium text-primary-600 hover:text-primary-500"
             >
-              Sign up
+              Sign in
             </Link>
           </p>
-
-          {registered && (
-            <div className="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
-              Account created successfully. Please sign in.
-            </div>
-          )}
 
           {serverError && (
             <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
@@ -68,6 +67,16 @@ export function LoginForm() {
           )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <Input
+              id="name"
+              label="Name"
+              type="text"
+              placeholder="Your name"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              error={errors.name}
+            />
             <Input
               id="email"
               label="Email"
@@ -82,19 +91,29 @@ export function LoginForm() {
               id="password"
               label="Password"
               type="password"
-              placeholder="Enter your password"
-              autoComplete="current-password"
+              placeholder="At least 8 characters"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
             />
+            <Input
+              id="confirmPassword"
+              label="Confirm Password"
+              type="password"
+              placeholder="Re-enter your password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              error={errors.confirmPassword}
+            />
 
             <Button
               type="submit"
-              isLoading={login.isPending}
+              isLoading={signup.isPending}
               className="w-full"
             >
-              Sign In
+              Create Account
             </Button>
           </form>
         </div>

@@ -7,9 +7,9 @@ import { useAuthStore } from "@/stores";
 import type {
   ApiResponse,
   LoginRequest,
+  MemberResponse,
   SignupRequest,
   TokenResponse,
-  MemberResponse,
 } from "@/types";
 
 export function useLogin() {
@@ -77,6 +77,8 @@ export function useLogout() {
   });
 }
 
+// Decode JWT payload for UI display only.
+// Server validates signature on every API request - no authorization bypass risk.
 function parseJwtPayload(
   token: string
 ): Record<string, string> | null {
