@@ -1,0 +1,65 @@
+# ApplicationSet: multi-environment deployment from single template
+# Generates ArgoCD Applications for dev/staging/prod from one definition
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: sportstix-services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - env: dev
+            namespace: sportstix-dev
+            targetRevision: develop
+            autoSync: true
+            replicas: "1"
+          - env: staging
+            namespace: sportstix-staging
+            targetRevision: main
+            autoSync: true
+            replicas: "2"
+          - env: prod
+            namespace: sportstix
+            targetRevision: main
+            autoSync: false
+            replicas: "2"
+  template:
+    metadata:
+      name: "sportstix-{{.env}}"
+      namespace: argocd
+      labels:
+        app.kubernetes.io/part-of: sportstix
+        sportstix.io/env: "{{.env}}"
+    spec:
+      project: sportstix
+      source:
+        repoURL: https://github.com/ressKim-io/ticket-traffic.git
+        targetRevision: "{{.targetRevision}}"
+        path: infra/k8s
+        directory:
+          recurse: true
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{.namespace}}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - PruneLast=true
+        retry:
+          limit: 3
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 1m
+  templatePatch: |
+    {{- if eq .autoSync "true" }}
+    spec:
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+    {{- end }}
