@@ -127,7 +127,7 @@ jobs:
         run: |
           kubeconform -summary -strict \
             -ignore-filename-pattern 'tls-certificate.yaml' \
-            -skip 'IstioOperator,Kiali,ClusterPolicy,ClusterSecretStore,ExternalSecret,Rollout,AnalysisTemplate,AnalysisRun,ScaledObject,TriggerAuthentication,BackupStorageLocation,VolumeSnapshotLocation,Schedule,PodChaos,NetworkChaos,Workflow' \
+            -skip 'IstioOperator,Kiali,ClusterPolicy,ClusterSecretStore,ExternalSecret,Rollout,AnalysisTemplate,AnalysisRun,ScaledObject,TriggerAuthentication,BackupStorageLocation,VolumeSnapshotLocation,Schedule,PodChaos,NetworkChaos,Workflow,StatusCheck' \
             -schema-location default \
             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
             infra/k8s/
