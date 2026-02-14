@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useGames } from "@/hooks";
+import { getErrorMessage } from "@/lib";
 import { GameCard, GameFilters, Pagination } from "@/components/game";
 import type { GameListParams } from "@/types";
 
@@ -11,7 +12,7 @@ export default function GamesPage() {
     size: 12,
   });
 
-  const { data, isLoading, isError } = useGames(params);
+  const { data, isLoading, isError, error } = useGames(params);
   const pageData = data?.data;
 
   return (
@@ -22,14 +23,16 @@ export default function GamesPage() {
       </div>
 
       {isLoading && (
-        <div className="mt-12 flex justify-center">
+        <div className="mt-12 flex justify-center" role="status" aria-live="polite">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
+          <span className="sr-only">Loading games...</span>
         </div>
       )}
 
       {isError && (
         <div className="mt-12 text-center">
-          <p className="text-gray-500">Failed to load games. Please try again.</p>
+          <p className="font-medium text-red-800">Failed to load games.</p>
+          <p className="mt-1 text-sm text-red-600">{getErrorMessage(error)}</p>
         </div>
       )}
 

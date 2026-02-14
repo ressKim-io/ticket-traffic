@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useGameDetail } from "@/hooks";
 import { StatusBadge } from "@/components/game";
 import { formatDate, formatTime } from "@/lib/format";
+import { getErrorMessage } from "@/lib";
 import type { SeatGrade } from "@/types";
 
 const gradeColors: Record<SeatGrade, string> = {
@@ -17,14 +18,34 @@ const gradeColors: Record<SeatGrade, string> = {
 export default function GameDetailPage() {
   const { gameId } = useParams<{ gameId: string }>();
   const id = Number(gameId);
-  const { data, isLoading, isError } = useGameDetail(id);
+  const isValidId = !!gameId && !isNaN(id) && id > 0;
+
+  // Hook always called unconditionally; `enabled` in useGameDetail handles invalid id
+  const { data, isLoading, isError, error } = useGameDetail(isValidId ? id : 0);
   const game = data?.data;
+
+  if (!isValidId) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <p className="text-gray-500">Invalid game ID.</p>
+          <Link
+            href="/games"
+            className="mt-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
+          >
+            ← Back to Games
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="flex justify-center">
+        <div className="flex justify-center" role="status" aria-live="polite">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
+          <span className="sr-only">Loading game details...</span>
         </div>
       </div>
     );
@@ -34,7 +55,12 @@ export default function GameDetailPage() {
     return (
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="text-center">
-          <p className="text-gray-500">Failed to load game details.</p>
+          <p className="font-medium text-red-800">
+            Failed to load game details.
+          </p>
+          <p className="mt-1 text-sm text-red-600">
+            {getErrorMessage(error)}
+          </p>
           <Link
             href="/games"
             className="mt-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
@@ -135,6 +161,9 @@ export default function GameDetailPage() {
 
         <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200">
+            <caption className="sr-only">
+              Section availability for {game.homeTeam} vs {game.awayTeam}
+            </caption>
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">

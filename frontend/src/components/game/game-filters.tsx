@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { GameStatus, GameListParams } from "@/types";
 
 interface GameFiltersProps {
@@ -16,10 +17,24 @@ const statuses: { value: GameStatus | ""; label: string }[] = [
 ];
 
 export function GameFilters({ params, onChange }: GameFiltersProps) {
+  const [teamInput, setTeamInput] = useState(params.teamName ?? "");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = teamInput.trim() || undefined;
+      if (trimmed !== params.teamName) {
+        onChange({ ...params, teamName: trimmed, page: 0 });
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamInput]);
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       {/* Status Filter */}
       <select
+        aria-label="Filter games by status"
         value={params.status ?? ""}
         onChange={(e) =>
           onChange({
@@ -37,14 +52,13 @@ export function GameFilters({ params, onChange }: GameFiltersProps) {
         ))}
       </select>
 
-      {/* Team Search */}
+      {/* Team Search (debounced) */}
       <input
         type="text"
         placeholder="Search team..."
-        value={params.teamName ?? ""}
-        onChange={(e) =>
-          onChange({ ...params, teamName: e.target.value || undefined, page: 0 })
-        }
+        aria-label="Search games by team name"
+        value={teamInput}
+        onChange={(e) => setTeamInput(e.target.value)}
         className="rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
     </div>
