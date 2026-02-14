@@ -74,6 +74,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
       SPRING_DATA_REDIS_HOST: redis
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
       OTEL_SERVICE_NAME: gateway-service
       JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
@@ -103,6 +104,9 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
+      JWT_KID: ${JWT_KID:-sportstix-1}
       OTEL_SERVICE_NAME: auth-service
       JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
