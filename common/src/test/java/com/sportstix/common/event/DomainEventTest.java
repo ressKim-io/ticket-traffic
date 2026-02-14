@@ -10,7 +10,7 @@ class DomainEventTest {
 
     @Test
     void bookingEvent_created_hasCorrectFields() {
-        BookingEvent event = BookingEvent.created(1L, 100L, 200L, 300L);
+        BookingEvent event = BookingEvent.created(1L, 100L, 200L, 300L, BigDecimal.valueOf(50000));
 
         assertThat(event.getEventType()).isEqualTo("BOOKING_CREATED");
         assertThat(event.getBookingId()).isEqualTo(1L);
@@ -68,15 +68,15 @@ class DomainEventTest {
 
     @Test
     void domainEvents_haveUniqueEventIds() {
-        BookingEvent e1 = BookingEvent.created(1L, 1L, 1L, 1L);
-        BookingEvent e2 = BookingEvent.created(1L, 1L, 1L, 1L);
+        BookingEvent e1 = BookingEvent.created(1L, 1L, 1L, 1L, null);
+        BookingEvent e2 = BookingEvent.created(1L, 1L, 1L, 1L, null);
 
         assertThat(e1.getEventId()).isNotEqualTo(e2.getEventId());
     }
 
     @Test
     void eventTypeConstants_matchFactoryOutput() {
-        assertThat(BookingEvent.created(1L, 1L, 1L, 1L).getEventType())
+        assertThat(BookingEvent.created(1L, 1L, 1L, 1L, null).getEventType())
                 .isEqualTo(BookingEvent.TYPE_CREATED);
         assertThat(SeatEvent.held(1L, 1L, 1L).getEventType())
                 .isEqualTo(SeatEvent.TYPE_HELD);
