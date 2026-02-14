@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opencost
+  namespace: argocd
+spec:
+  project: sportstix
+  source:
+    repoURL: https://opencost.github.io/opencost-helm-chart
+    chart: opencost
+    targetRevision: 1.43.2
+    helm:
+      releaseName: opencost
+      values: |
+        opencost:
+          exporter:
+            defaultClusterId: sportstix-prod
+          prometheus:
+            internal:
+              serviceName: prometheus
+              namespaceName: observability
+              port: 9090
+          ui:
+            enabled: true
+          metrics:
+            serviceMonitor:
+              enabled: true
+              namespace: observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: opencost
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
