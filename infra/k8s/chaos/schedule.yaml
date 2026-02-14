@@ -1,4 +1,6 @@
 # Weekly PodChaos schedule - Wednesday 14:00 KST (05:00 UTC)
+# Targets only booking and payment (have PDB + KEDA for recovery)
+# NOTE: Apply 'experiment.chaos-mesh.org/pause: "true"' annotation to pause
 apiVersion: chaos-mesh.org/v1alpha1
 kind: Schedule
 metadata:
@@ -6,8 +8,13 @@ metadata:
   namespace: sportstix
   labels:
     app.kubernetes.io/part-of: sportstix
+  annotations:
+    experiment.chaos-mesh.org/pause: "true"
+    chaos-mesh.org/description: "Weekly pod-kill for booking/payment resilience validation"
+    chaos-mesh.org/environment: "staging-only"
 spec:
   schedule: "0 5 * * 3"
+  startingDeadlineSeconds: 600
   type: PodChaos
   historyLimit: 5
   concurrencyPolicy: Forbid
@@ -18,9 +25,17 @@ spec:
       namespaces:
         - sportstix
       labelSelectors:
-        sportstix.io/tier: backend
+        app.kubernetes.io/name: booking
+      expressionSelectors:
+        - key: app.kubernetes.io/name
+          operator: In
+          values:
+            - booking
+            - payment
 ---
 # Weekly NetworkChaos schedule - Thursday 14:00 KST (05:00 UTC)
+# Targets only booking and payment for latency resilience validation
+# NOTE: Apply 'experiment.chaos-mesh.org/pause: "true"' annotation to pause
 apiVersion: chaos-mesh.org/v1alpha1
 kind: Schedule
 metadata:
@@ -28,8 +43,13 @@ metadata:
   namespace: sportstix
   labels:
     app.kubernetes.io/part-of: sportstix
+  annotations:
+    experiment.chaos-mesh.org/pause: "true"
+    chaos-mesh.org/description: "Weekly network delay for booking/payment latency resilience"
+    chaos-mesh.org/environment: "staging-only"
 spec:
   schedule: "0 5 * * 4"
+  startingDeadlineSeconds: 600
   type: NetworkChaos
   historyLimit: 5
   concurrencyPolicy: Forbid
@@ -39,8 +59,12 @@ spec:
     selector:
       namespaces:
         - sportstix
-      labelSelectors:
-        sportstix.io/tier: backend
+      expressionSelectors:
+        - key: app.kubernetes.io/name
+          operator: In
+          values:
+            - booking
+            - payment
     delay:
       latency: "100ms"
       jitter: "30ms"
