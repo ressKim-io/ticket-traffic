@@ -4,7 +4,7 @@
 # ==============================================================
 
 # --- Stage 1: Build ---
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk-jammy AS builder
 
 WORKDIR /app
 
@@ -19,11 +19,11 @@ COPY common/ common/
 # Download dependencies (cached unless build.gradle changes)
 ARG SERVICE_NAME
 COPY ${SERVICE_NAME}/build.gradle ${SERVICE_NAME}/build.gradle
-RUN ./gradlew :${SERVICE_NAME}:dependencies --no-daemon 2>/dev/null || true
+RUN ./gradlew :${SERVICE_NAME}:dependencies --no-daemon -Dorg.gradle.native=false 2>/dev/null || true
 
 # Copy service source and build
 COPY ${SERVICE_NAME}/src/ ${SERVICE_NAME}/src/
-RUN ./gradlew :${SERVICE_NAME}:build -x test --no-daemon
+RUN ./gradlew :${SERVICE_NAME}:build -x test --no-daemon -Dorg.gradle.native=false
 
 # --- Stage 2: Runtime ---
 FROM eclipse-temurin:21-jre-alpine

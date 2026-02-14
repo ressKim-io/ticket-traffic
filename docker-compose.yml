@@ -5,6 +5,8 @@ x-otel-env: &otel-env
   OTEL_LOGS_EXPORTER: none
   OTEL_TRACES_SAMPLER: parentbased_always_on
   OTEL_RESOURCE_ATTRIBUTES: deployment.environment=docker
+  OTEL_INSTRUMENTATION_HTTP_SERVER_ROUTE_KNOWN_METHODS: GET,POST,PUT,DELETE,PATCH
+  OTEL_JAVAAGENT_EXCLUDE_URLS: /actuator/health,/actuator/health/readiness,/actuator/health/liveness,/actuator/prometheus,/actuator/info
 
 services:
   # ============================================
@@ -78,7 +80,7 @@ services:
       redis:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -109,7 +111,7 @@ services:
       redis:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -143,7 +145,7 @@ services:
       kafka:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -172,7 +174,7 @@ services:
       kafka:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -206,7 +208,7 @@ services:
       kafka:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -237,7 +239,7 @@ services:
       kafka:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -268,7 +270,7 @@ services:
       kafka:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     deploy:
       resources:
         limits:

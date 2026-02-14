@@ -22,3 +22,4 @@ data:
   OTEL_LOGS_EXPORTER: "none"
   OTEL_TRACES_SAMPLER: "parentbased_always_on"
   OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=k8s"
+  OTEL_JAVAAGENT_EXCLUDE_URLS: "/actuator/health,/actuator/health/readiness,/actuator/health/liveness,/actuator/prometheus,/actuator/info"
