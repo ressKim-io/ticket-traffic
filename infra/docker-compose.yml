@@ -83,7 +83,7 @@ services:
 
   # OTel Collector - receives traces from services, forwards to Tempo
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.115.0
+    image: otel/opentelemetry-collector-contrib:0.114.0
     container_name: sportstix-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
@@ -99,10 +99,7 @@ services:
         limits:
           memory: 384m
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:13133"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      disable: true
 
   # Grafana Tempo - distributed tracing backend
   tempo:
