@@ -2,6 +2,7 @@ package com.sportstix.booking.service;
 
 import com.sportstix.common.exception.BusinessException;
 import com.sportstix.common.response.ErrorCode;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -17,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Tier 1: Redis distributed lock for seat booking.
  * Prevents concurrent booking attempts across pods.
+ * Circuit breaker protects against Redis outages.
  */
 @Slf4j
 @Component
@@ -33,6 +35,7 @@ public class SeatLockService {
      * Acquires distributed locks for multiple seats in sorted order (deadlock prevention).
      * Returns acquired locks for cleanup.
      */
+    @CircuitBreaker(name = "redisLock", fallbackMethod = "acquireLocksFallback")
     public List<RLock> acquireLocks(Collection<Long> gameSeatIds) {
         List<Long> sortedIds = new ArrayList<>(gameSeatIds);
         Collections.sort(sortedIds);
@@ -56,6 +59,13 @@ public class SeatLockService {
             throw new BusinessException(ErrorCode.LOCK_ACQUISITION_FAILED,
                     "Lock acquisition interrupted");
         }
+    }
+
+    @SuppressWarnings("unused")
+    private List<RLock> acquireLocksFallback(Collection<Long> gameSeatIds, Throwable t) {
+        log.error("Redis circuit breaker open. Seat lock unavailable for seats: {}", gameSeatIds, t);
+        throw new BusinessException(ErrorCode.LOCK_ACQUISITION_FAILED,
+                "Service temporarily unavailable. Please try again shortly.");
     }
 
     public void releaseLocks(List<RLock> locks) {

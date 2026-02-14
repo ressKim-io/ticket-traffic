@@ -55,3 +55,50 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+  health:
+    circuitbreakers:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    circuitBreakerAspectOrder: 3
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        registerHealthIndicator: true
+    instances:
+      kafkaProducer:
+        baseConfig: default
+        slidingWindowSize: 20
+        waitDurationInOpenState: 15s
+      redisLock:
+        baseConfig: default
+        failureRateThreshold: 60
+        waitDurationInOpenState: 10s
+        ignoreExceptions:
+          - com.sportstix.common.exception.BusinessException
+        recordExceptions:
+          - org.redisson.client.RedisException
+          - java.net.ConnectException
+          - java.io.IOException
+  retry:
+    retryAspectOrder: 4
+    instances:
+      kafkaProducer:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        enableRandomizedWait: true
+        randomizedWaitFactor: 0.5
+        retryExceptions:
+          - java.lang.RuntimeException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - java.util.concurrent.ExecutionException

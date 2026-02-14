@@ -7,7 +7,6 @@ import com.sportstix.booking.domain.Booking;
 import com.sportstix.booking.domain.BookingSeat;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -15,7 +14,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class BookingEventProducer {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ResilientKafkaPublisher publisher;
 
     public void publishBookingCreated(Booking booking) {
         String key = String.valueOf(booking.getGameId());
@@ -24,7 +23,7 @@ public class BookingEventProducer {
                     booking.getId(), booking.getUserId(),
                     booking.getGameId(), seat.getGameSeatId(),
                     booking.getTotalPrice());
-            publish(Topics.BOOKING_CREATED, key, event, "booking-created");
+            publisher.publish(Topics.BOOKING_CREATED, key, event, "booking-created");
         }
     }
 
@@ -34,7 +33,7 @@ public class BookingEventProducer {
             BookingEvent event = BookingEvent.confirmed(
                     booking.getId(), booking.getUserId(),
                     booking.getGameId(), seat.getGameSeatId());
-            publish(Topics.BOOKING_CONFIRMED, key, event, "booking-confirmed");
+            publisher.publish(Topics.BOOKING_CONFIRMED, key, event, "booking-confirmed");
         }
     }
 
@@ -44,7 +43,7 @@ public class BookingEventProducer {
             BookingEvent event = BookingEvent.cancelled(
                     booking.getId(), booking.getUserId(),
                     booking.getGameId(), seat.getGameSeatId());
-            publish(Topics.BOOKING_CANCELLED, key, event, "booking-cancelled");
+            publisher.publish(Topics.BOOKING_CANCELLED, key, event, "booking-cancelled");
         }
     }
 
@@ -53,7 +52,7 @@ public class BookingEventProducer {
         for (BookingSeat seat : booking.getBookingSeats()) {
             SeatEvent event = SeatEvent.held(
                     booking.getGameId(), seat.getGameSeatId(), booking.getUserId());
-            publish(Topics.SEAT_HELD, key, event, "seat-held");
+            publisher.publish(Topics.SEAT_HELD, key, event, "seat-held");
         }
     }
 
@@ -62,16 +61,7 @@ public class BookingEventProducer {
         for (BookingSeat seat : booking.getBookingSeats()) {
             SeatEvent event = SeatEvent.released(
                     booking.getGameId(), seat.getGameSeatId(), booking.getUserId());
-            publish(Topics.SEAT_RELEASED, key, event, "seat-released");
+            publisher.publish(Topics.SEAT_RELEASED, key, event, "seat-released");
         }
-    }
-
-    private void publish(String topic, String key, Object event, String eventName) {
-        kafkaTemplate.send(topic, key, event)
-                .whenComplete((result, ex) -> {
-                    if (ex != null) {
-                        log.error("Failed to publish {}: topic={}", eventName, topic, ex);
-                    }
-                });
     }
 }

@@ -5,7 +5,6 @@ import com.sportstix.common.event.Topics;
 import com.sportstix.payment.domain.Payment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -13,40 +12,32 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PaymentEventProducer {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ResilientKafkaPublisher publisher;
 
     public void publishCompleted(Payment payment) {
-        publish(Topics.PAYMENT_COMPLETED,
+        String key = String.valueOf(payment.getBookingId());
+        publisher.publish(Topics.PAYMENT_COMPLETED,
+                key,
                 PaymentEvent.completed(payment.getId(), payment.getBookingId(),
                         payment.getUserId(), payment.getAmount()),
-                payment);
+                "payment-completed");
     }
 
     public void publishFailed(Payment payment) {
-        publish(Topics.PAYMENT_FAILED,
+        String key = String.valueOf(payment.getBookingId());
+        publisher.publish(Topics.PAYMENT_FAILED,
+                key,
                 PaymentEvent.failed(payment.getId(), payment.getBookingId(),
                         payment.getUserId(), payment.getAmount()),
-                payment);
+                "payment-failed");
     }
 
     public void publishRefunded(Payment payment) {
-        publish(Topics.PAYMENT_REFUNDED,
+        String key = String.valueOf(payment.getBookingId());
+        publisher.publish(Topics.PAYMENT_REFUNDED,
+                key,
                 PaymentEvent.refunded(payment.getId(), payment.getBookingId(),
                         payment.getUserId(), payment.getAmount()),
-                payment);
-    }
-
-    private void publish(String topic, PaymentEvent event, Payment payment) {
-        String key = String.valueOf(payment.getBookingId());
-        kafkaTemplate.send(topic, key, event)
-                .whenComplete((result, ex) -> {
-                    if (ex != null) {
-                        log.error("Failed to publish {}: paymentId={}",
-                                topic, payment.getId(), ex);
-                    } else {
-                        log.info("Published {}: paymentId={}, bookingId={}",
-                                topic, payment.getId(), payment.getBookingId());
-                    }
-                });
+                "payment-refunded");
     }
 }
