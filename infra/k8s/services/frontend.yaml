@@ -49,6 +49,12 @@ spec:
               port: 3000
             initialDelaySeconds: 15
             periodSeconds: 15
+          startupProbe:
+            httpGet:
+              path: /
+              port: 3000
+            failureThreshold: 10
+            periodSeconds: 3
 ---
 apiVersion: v1
 kind: Service
