@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: booking
   namespace: sportstix
@@ -11,10 +11,42 @@ spec:
   replicas: 2
   revisionHistoryLimit: 3
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+    canary:
+      canaryService: booking-canary
+      stableService: booking
+      trafficRouting:
+        istio:
+          virtualServices:
+            - name: booking-ws
+              routes:
+                - primary
+          destinationRule:
+            name: booking
+            canarySubsetName: canary
+            stableSubsetName: stable
+      steps:
+        - setWeight: 20
+        - pause: { duration: 30s }
+        - analysis:
+            templates:
+              - templateName: success-rate
+              - templateName: latency-check
+            args:
+              - name: service-name
+                value: booking
+        - setWeight: 40
+        - pause: { duration: 30s }
+        - setWeight: 60
+        - pause: { duration: 30s }
+        - setWeight: 80
+        - pause: { duration: 30s }
+        - analysis:
+            templates:
+              - templateName: success-rate
+              - templateName: latency-check
+            args:
+              - name: service-name
+                value: booking
   selector:
     matchLabels:
       app.kubernetes.io/name: booking
@@ -107,6 +139,25 @@ metadata:
   labels:
     app.kubernetes.io/name: booking
     app.kubernetes.io/part-of: sportstix
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: booking
+  ports:
+    - port: 8084
+      targetPort: http
+      protocol: TCP
+      name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-canary
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/name: booking
+    app.kubernetes.io/part-of: sportstix
+    app.kubernetes.io/component: canary
 spec:
   type: ClusterIP
   selector:

@@ -35,7 +35,7 @@ spec:
   hosts:
     - booking.sportstix.svc.cluster.local
   http:
-    # WebSocket route
+    # WebSocket route (highest priority, not managed by Rollouts)
     - match:
         - uri:
             prefix: /ws/booking
@@ -45,9 +45,18 @@ spec:
             port:
               number: 8084
       timeout: 0s
-    # Default HTTP route
-    - route:
+    # Canary route (managed by Argo Rollouts)
+    - name: primary
+      route:
         - destination:
             host: booking.sportstix.svc.cluster.local
+            subset: stable
             port:
               number: 8084
+          weight: 100
+        - destination:
+            host: booking.sportstix.svc.cluster.local
+            subset: canary
+            port:
+              number: 8084
+          weight: 0

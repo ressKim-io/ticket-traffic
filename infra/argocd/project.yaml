@@ -7,12 +7,15 @@ spec:
   description: SportsTix ticketing platform
   sourceRepos:
     - 'https://github.com/ressKim-io/ticket-traffic.git'
+    - 'https://argoproj.github.io/argo-helm'
   destinations:
     - namespace: sportstix
       server: https://kubernetes.default.svc
     - namespace: kyverno
       server: https://kubernetes.default.svc
     - namespace: external-secrets
+      server: https://kubernetes.default.svc
+    - namespace: argo-rollouts
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ''
