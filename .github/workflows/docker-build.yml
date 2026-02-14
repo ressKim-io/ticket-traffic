@@ -8,6 +8,12 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+  security-events: write
+
 env:
   AWS_REGION: ap-northeast-2
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
@@ -99,6 +105,22 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/sportstix/${{ matrix.service }}:${{ github.sha }}
+          severity: CRITICAL
+          exit-code: 1
+          format: sarif
+          output: trivy-image-results.sarif
+
+      - name: Upload Trivy results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image-results.sarif
+          category: ${{ matrix.service }}
+
   # Build and push frontend image
   build-frontend:
     needs: changes
@@ -129,3 +151,19 @@ jobs:
             ${{ env.ECR_REGISTRY }}/sportstix/frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/sportstix/frontend:${{ github.sha }}
+          severity: CRITICAL
+          exit-code: 1
+          format: sarif
+          output: trivy-frontend-results.sarif
+
+      - name: Upload Trivy results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-frontend-results.sarif
+          category: frontend
