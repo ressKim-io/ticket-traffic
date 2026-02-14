@@ -35,34 +35,6 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: api-gateway
-  description: API Gateway with JWT validation, rate limiting, and request routing
-  annotations:
-    backstage.io/kubernetes-id: gateway
-    backstage.io/kubernetes-namespace: sportstix
-    prometheus.io/rule: |
-      sum(rate(http_server_requests_seconds_count{service="gateway"}[5m]))
-  tags:
-    - java
-    - spring-cloud-gateway
-    - webflux
-spec:
-  type: service
-  lifecycle: production
-  owner: platform-team
-  system: sportstix
-  dependsOn:
-    - component:auth-service
-    - component:game-service
-    - component:queue-service
-    - component:booking-service
-    - component:payment-service
-  providesApis:
-    - gateway-api
----
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
   name: auth-service
   description: Authentication service with JWT token issuance and validation
   annotations:
@@ -203,28 +175,8 @@ spec:
   lifecycle: production
   owner: platform-team
   system: sportstix
-  consumesApis:
-    - gateway-api
 ---
 # API definitions
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata:
-  name: gateway-api
-  description: SportsTix API Gateway endpoints
-spec:
-  type: openapi
-  lifecycle: production
-  owner: platform-team
-  system: sportstix
-  definition: |
-    openapi: "3.0.0"
-    info:
-      title: SportsTix Gateway API
-      version: 1.0.0
-    servers:
-      - url: https://api.sportstix.io
----
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:

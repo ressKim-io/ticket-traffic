@@ -6,12 +6,12 @@ MSA Event-Driven sports ticketing system designed for high-concurrency seat book
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Java 21, Spring Boot 3.3, Spring Cloud Gateway |
+| Backend | Java 21, Spring Boot 3.3 |
 | Database | PostgreSQL 16 (per-service schema), Redis 7 |
 | Messaging | Apache Kafka 3.9 (KRaft mode) |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS, Zustand |
 | Infra | Docker, Kubernetes (EKS), Terraform, ArgoCD |
-| Service Mesh | Istio (mTLS, traffic management, outlier detection) |
+| Service Mesh | Istio (IngressGateway, mTLS, JWT, routing, rate limit, bot detection) |
 | Delivery | Argo Rollouts (canary), KEDA (event-driven autoscaling) |
 | Observability | OpenTelemetry, Prometheus, Grafana, Tempo, Loki |
 | Resilience | Chaos Mesh, Velero (DR), Kyverno (policy), ESO (secrets) |
@@ -30,11 +30,10 @@ MSA Event-Driven sports ticketing system designed for high-concurrency seat book
                     | :3000     |
                     +-----+-----+
                           |
-                    +-----v-----+
-                    |  Gateway   |
-                    |  :8080     |
-                    |  JWT/Rate  |
-                    +-----+-----+
+               +----------v----------+
+               | Istio IngressGateway |
+               | JWT/Rate/Bot/CORS   |
+               +----------+----------+
                           |
      +----------+---------+---------+----------+----------+
      |          |         |         |          |          |
@@ -57,8 +56,8 @@ MSA Event-Driven sports ticketing system designed for high-concurrency seat book
 
 | Service | Port | Description | Key Tech |
 |---------|------|-------------|----------|
-| **API Gateway** | 8080 | Routing, JWT validation, rate limiting, bot prevention | Spring Cloud Gateway (WebFlux) |
-| **Auth Service** | 8081 | Registration, login, JWT token management | Spring Security, BCrypt |
+| **Istio IngressGW** | 80/443 | JWT validation, routing, rate limiting, bot detection, CORS | Envoy (C++), EnvoyFilter |
+| **Auth Service** | 8081 | Registration, login, JWT token management, JWKS | Spring Security, RS256 |
 | **Game Service** | 8082 | Stadium/section/seat CRUD, game scheduling | JPA, Kafka Producer |
 | **Queue Service** | 8083 | Virtual waiting room, fair queue ordering | Redis Sorted Set, WebSocket |
 | **Booking Service** | 8084 | Seat hold/confirm/cancel with 3-tier locking | jOOQ + JPA Hybrid, SAGA, Resilience4j |
@@ -67,7 +66,7 @@ MSA Event-Driven sports ticketing system designed for high-concurrency seat book
 
 ### Communication Patterns
 
-- **Sync REST**: Frontend -> Gateway -> Service (reads only)
+- **Sync REST**: Frontend -> Istio IngressGateway -> Service (reads only)
 - **Async Kafka**: All inter-service write operations (no service-to-service REST)
 - **WebSocket**: Real-time queue position and seat status updates
 - **Data Locality**: Services maintain local replica tables synced via Kafka events
