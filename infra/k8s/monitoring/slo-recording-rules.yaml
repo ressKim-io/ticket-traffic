@@ -1,0 +1,105 @@
+# SLO/SLI Recording Rules (Google SRE Chapter 6)
+# SLO Targets: Availability 99.95%, Latency (p50 < 500ms) 99.5%
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sportstix-slo-recording
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    release: prometheus
+spec:
+  groups:
+    - name: sportstix.slo.availability
+      interval: 30s
+      rules:
+        # Availability SLI: ratio of non-5xx requests
+        - record: sli:availability:ratio_rate5m
+          expr: >
+            1 - (
+              sum(rate(http_server_requests_seconds_count{namespace="sportstix",status=~"5.."}[5m]))
+              / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[5m]))
+            )
+
+        - record: sli:availability:ratio_rate30m
+          expr: >
+            1 - (
+              sum(rate(http_server_requests_seconds_count{namespace="sportstix",status=~"5.."}[30m]))
+              / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[30m]))
+            )
+
+        - record: sli:availability:ratio_rate1h
+          expr: >
+            1 - (
+              sum(rate(http_server_requests_seconds_count{namespace="sportstix",status=~"5.."}[1h]))
+              / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[1h]))
+            )
+
+        - record: sli:availability:ratio_rate6h
+          expr: >
+            1 - (
+              sum(rate(http_server_requests_seconds_count{namespace="sportstix",status=~"5.."}[6h]))
+              / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[6h]))
+            )
+
+        - record: sli:availability:ratio_rate1d
+          expr: >
+            1 - (
+              sum(rate(http_server_requests_seconds_count{namespace="sportstix",status=~"5.."}[1d]))
+              / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[1d]))
+            )
+
+        - record: sli:availability:ratio_rate3d
+          expr: >
+            1 - (
+              sum(rate(http_server_requests_seconds_count{namespace="sportstix",status=~"5.."}[3d]))
+              / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[3d]))
+            )
+
+    - name: sportstix.slo.latency
+      interval: 30s
+      rules:
+        # Latency SLI: ratio of requests completing within 500ms
+        - record: sli:latency:good_ratio_rate5m
+          expr: >
+            sum(rate(http_server_requests_seconds_bucket{namespace="sportstix",le="0.5"}[5m]))
+            / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[5m]))
+
+        - record: sli:latency:good_ratio_rate30m
+          expr: >
+            sum(rate(http_server_requests_seconds_bucket{namespace="sportstix",le="0.5"}[30m]))
+            / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[30m]))
+
+        - record: sli:latency:good_ratio_rate1h
+          expr: >
+            sum(rate(http_server_requests_seconds_bucket{namespace="sportstix",le="0.5"}[1h]))
+            / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[1h]))
+
+        - record: sli:latency:good_ratio_rate6h
+          expr: >
+            sum(rate(http_server_requests_seconds_bucket{namespace="sportstix",le="0.5"}[6h]))
+            / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[6h]))
+
+        - record: sli:latency:good_ratio_rate1d
+          expr: >
+            sum(rate(http_server_requests_seconds_bucket{namespace="sportstix",le="0.5"}[1d]))
+            / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[1d]))
+
+        - record: sli:latency:good_ratio_rate3d
+          expr: >
+            sum(rate(http_server_requests_seconds_bucket{namespace="sportstix",le="0.5"}[3d]))
+            / sum(rate(http_server_requests_seconds_count{namespace="sportstix"}[3d]))
+
+    - name: sportstix.slo.error_budget
+      interval: 30s
+      rules:
+        # Error budget remaining (1 - consumed)
+        # SLO target: 99.95% → budget = 0.05%
+        - record: slo:availability:error_budget_remaining
+          expr: >
+            1 - ((1 - sli:availability:ratio_rate1d) / (1 - 0.9995))
+
+        # SLO target: 99.5% → budget = 0.5%
+        - record: slo:latency:error_budget_remaining
+          expr: >
+            1 - ((1 - sli:latency:good_ratio_rate1d) / (1 - 0.995))
