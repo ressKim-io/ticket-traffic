@@ -32,12 +32,12 @@ export function SeatGrid({
       map.set(seat.rowNumber, group);
     }
     // Sort seats within each row by seat number
-    for (const group of map.values()) {
+    Array.from(map.values()).forEach((group) => {
       group.sort((a, b) => a.seatNumber - b.seatNumber);
-    }
+    });
     // Sort rows naturally
-    return Array.from(map.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0], undefined, { numeric: true })
+    return Array.from(map.entries()).sort(
+      ([a], [b]) => a.localeCompare(b, undefined, { numeric: true })
     );
   }, [seats]);
 
