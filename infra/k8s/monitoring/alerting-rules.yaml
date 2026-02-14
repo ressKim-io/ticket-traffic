@@ -12,6 +12,8 @@ spec:
   groups:
     - name: sportstix.availability
       rules:
+        # Superseded by SLO burn-rate alerts (slo-alerting-rules.yaml)
+        # Retained for backward compatibility during SLO adoption
         - alert: HighErrorRate
           expr: >
             sum(rate(http_server_requests_seconds_count{namespace="sportstix",status=~"5.."}[5m])) by (application)
