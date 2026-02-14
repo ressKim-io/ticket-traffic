@@ -47,7 +47,7 @@ spec:
                 name: db-secret
           env:
             - name: JAVA_OPTS
-              value: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
+              value: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -56,10 +56,10 @@ spec:
           resources:
             requests:
               cpu: 200m
-              memory: 384Mi
+              memory: 512Mi
             limits:
               cpu: "1"
-              memory: 512Mi
+              memory: 640Mi
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness

@@ -1,0 +1,78 @@
+# ServiceAccount for OTel Collector (k8sattributes processor)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector-sa
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: sportstix
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector-role
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: sportstix
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-binding
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: sportstix
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector-role
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector-sa
+    namespace: observability
+---
+# ServiceAccount for Promtail (node log access)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promtail-sa
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/part-of: sportstix
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail-role
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/part-of: sportstix
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: promtail-binding
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/part-of: sportstix
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: promtail-role
+subjects:
+  - kind: ServiceAccount
+    name: promtail-sa
+    namespace: observability
