@@ -1,33 +1,5 @@
-# Default DestinationRule for all sportstix services
+# DestinationRules for sportstix services
 # Connection pooling + outlier detection for resilience
-apiVersion: networking.istio.io/v1
-kind: DestinationRule
-metadata:
-  name: gateway
-  namespace: sportstix
-spec:
-  host: gateway.sportstix.svc.cluster.local
-  trafficPolicy:
-    connectionPool:
-      tcp:
-        maxConnections: 100
-        connectTimeout: 5s
-      http:
-        h2UpgradePolicy: DEFAULT
-        maxRequestsPerConnection: 100
-    outlierDetection:
-      consecutive5xxErrors: 5
-      interval: 10s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 50
-  subsets:
-    - name: stable
-      labels:
-        app.kubernetes.io/name: gateway
-    - name: canary
-      labels:
-        app.kubernetes.io/name: gateway
----
 apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:

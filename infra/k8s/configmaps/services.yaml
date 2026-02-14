@@ -1,18 +1,6 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: gateway-config
-  namespace: sportstix
-  labels:
-    app.kubernetes.io/part-of: sportstix
-    app.kubernetes.io/component: gateway
-data:
-  SERVER_PORT: "8080"
-  OTEL_SERVICE_NAME: "gateway-service"
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
   name: auth-config
   namespace: sportstix
   labels:
