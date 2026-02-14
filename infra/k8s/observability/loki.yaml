@@ -45,6 +45,7 @@ data:
       compaction_interval: 10m
       retention_enabled: true
       retention_delete_delay: 2h
+      delete_request_store: filesystem
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -78,6 +79,7 @@ spec:
               name: http
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           resources:

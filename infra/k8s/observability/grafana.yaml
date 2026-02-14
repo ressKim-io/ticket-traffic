@@ -83,6 +83,7 @@ spec:
               value: traceqlEditor tempoServiceGraph
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           resources:
