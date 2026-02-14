@@ -10,26 +10,23 @@ clients:
 
 scrape_configs:
   - job_name: docker
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: docker
-          __path__: /var/log/docker/*/*-json.log
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: container
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/sportstix-(.*)'
+        target_label: service
     pipeline_stages:
       - docker: {}
       - json:
           expressions:
             output: log
-            stream: stream
       - output:
           source: output
-      # Extract service name from container label
-      - regex:
-          expression: '.*"service":"(?P<service>[^"]+)".*'
-          source: output
-      - labels:
-          service:
       # Extract traceId for trace-to-log correlation
       - regex:
           expression: '.*"traceId":"(?P<traceId>[^"]+)".*'

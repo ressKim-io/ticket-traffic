@@ -13,8 +13,8 @@ processors:
 
   memory_limiter:
     check_interval: 1s
-    limit_mib: 256
-    spike_limit_mib: 64
+    limit_mib: 300
+    spike_limit_mib: 75
 
 exporters:
   otlp/tempo:

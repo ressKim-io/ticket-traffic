@@ -73,9 +73,11 @@ services:
       SERVER_PORT: 8080
       SPRING_DATA_REDIS_HOST: redis
       OTEL_SERVICE_NAME: gateway-service
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       redis:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     deploy:
       resources:
@@ -100,11 +102,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       OTEL_SERVICE_NAME: auth-service
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     deploy:
       resources:
@@ -130,13 +134,15 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: game-service
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     deploy:
       resources:
@@ -159,11 +165,13 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: queue-service
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx512m -javaagent:/app/opentelemetry-javaagent.jar"
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       redis:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     deploy:
       resources:
@@ -189,13 +197,15 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: booking-service
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx512m -javaagent:/app/opentelemetry-javaagent.jar"
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     deploy:
       resources:
@@ -220,11 +230,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: payment-service
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     deploy:
       resources:
@@ -249,11 +261,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: admin-service
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Xms128m -Xmx384m -javaagent:/app/opentelemetry-javaagent.jar"
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     deploy:
       resources:
