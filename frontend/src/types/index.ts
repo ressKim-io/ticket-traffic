@@ -16,3 +16,9 @@ export type {
   SectionSeatSummary,
   GameListParams,
 } from "./game";
+export type {
+  QueueStatus,
+  QueueEnterRequest,
+  QueueStatusResponse,
+  QueueUpdateMessage,
+} from "./queue";
