@@ -29,13 +29,20 @@ export function useGameSeats(gameId: number, sectionId: number | null) {
 
 /**
  * Hold selected seats (creates a PENDING booking).
+ * Includes queue token from sessionStorage in request headers.
  */
 export function useHoldSeats() {
   return useMutation({
     mutationFn: async (req: HoldSeatsRequest) => {
+      const queueToken = sessionStorage.getItem(`queue-token-${req.gameId}`);
+      if (!queueToken) {
+        throw new Error("Queue token not found. Please rejoin the queue.");
+      }
+
       const { data } = await apiClient.post<ApiResponse<BookingResponse>>(
         "/bookings/hold",
-        req
+        req,
+        { headers: { "X-Queue-Token": queueToken } }
       );
       return data;
     },

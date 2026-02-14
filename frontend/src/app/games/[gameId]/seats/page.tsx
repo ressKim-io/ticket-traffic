@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { AuthGuard } from "@/components/auth";
@@ -8,8 +8,6 @@ import { SectionSelector, SeatGrid, SelectedSeatsPanel } from "@/components/seat
 import { useGameDetail, useGameSeats, useHoldSeats } from "@/hooks";
 import { getErrorMessage } from "@/lib";
 import type { GameSeatResponse } from "@/types";
-
-const MAX_SEATS = 4;
 
 function SeatsContent() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -41,17 +39,19 @@ function SeatsContent() {
     setSelectedSeats(new Map()); // Clear selections when switching sections
   }, []);
 
+  const maxSeats = game?.maxTicketsPerUser ?? 4;
+
   const handleSeatToggle = useCallback((seat: GameSeatResponse) => {
     setSelectedSeats((prev) => {
       const next = new Map(prev);
       if (next.has(seat.gameSeatId)) {
         next.delete(seat.gameSeatId);
-      } else if (next.size < MAX_SEATS) {
+      } else if (next.size < maxSeats) {
         next.set(seat.gameSeatId, seat);
       }
       return next;
     });
-  }, []);
+  }, [maxSeats]);
 
   const handleRemoveSeat = useCallback((gameSeatId: number) => {
     setSelectedSeats((prev) => {
@@ -60,6 +60,15 @@ function SeatsContent() {
       return next;
     });
   }, []);
+
+  const selectedSeatsList = useMemo(
+    () => Array.from(selectedSeats.values()),
+    [selectedSeats]
+  );
+  const selectedIds = useMemo(
+    () => new Set(selectedSeats.keys()),
+    [selectedSeats]
+  );
 
   const handleHold = useCallback(() => {
     if (!isValidId || selectedSeats.size === 0) return;
@@ -134,9 +143,6 @@ function SeatsContent() {
       </div>
     );
   }
-
-  const selectedSeatsList = Array.from(selectedSeats.values());
-  const selectedIds = new Set(selectedSeats.keys());
 
   return (
     <div className="flex flex-col gap-6">
