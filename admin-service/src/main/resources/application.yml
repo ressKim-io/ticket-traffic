@@ -33,6 +33,10 @@ spring:
       properties:
         spring.json.trusted.packages: com.sportstix.common.event
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
 server:
   port: ${SERVER_PORT:8086}
 

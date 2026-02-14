@@ -34,6 +34,10 @@ management:
     health:
       show-details: when_authorized
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
 jwt:
   secret: ${JWT_SECRET:sportstix-default-secret-key-for-development-only-32bytes!}
   access-token-expiry: ${JWT_ACCESS_EXPIRY:3600000}

@@ -36,6 +36,10 @@ spring:
 server:
   port: ${SERVER_PORT:8082}
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
 management:
   endpoints:
     web:
