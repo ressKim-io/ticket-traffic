@@ -9,6 +9,12 @@ metadata:
     app.kubernetes.io/component: frontend
 spec:
   replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: frontend
@@ -20,13 +26,14 @@ spec:
         app.kubernetes.io/name: frontend
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: frontend
+        sportstix.io/tier: frontend
     spec:
       serviceAccountName: frontend-sa
       automountServiceAccountToken: false
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: frontend
