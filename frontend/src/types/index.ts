@@ -22,3 +22,11 @@ export type {
   QueueStatusResponse,
   QueueUpdateMessage,
 } from "./queue";
+export type {
+  SeatStatus,
+  BookingStatus,
+  GameSeatResponse,
+  HoldSeatsRequest,
+  BookingResponse,
+  BookingSeatInfo,
+} from "./booking";

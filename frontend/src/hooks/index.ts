@@ -6,3 +6,4 @@ export {
   useQueueLeave,
   useQueueWebSocket,
 } from "./use-queue";
+export { useGameSeats, useHoldSeats } from "./use-seats";
