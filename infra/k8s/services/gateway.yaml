@@ -9,6 +9,12 @@ metadata:
     app.kubernetes.io/component: gateway
 spec:
   replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: gateway
@@ -20,6 +26,7 @@ spec:
         app.kubernetes.io/name: gateway
         app.kubernetes.io/part-of: sportstix
         app.kubernetes.io/component: gateway
+        sportstix.io/tier: gateway
     spec:
       serviceAccountName: gateway-sa
       automountServiceAccountToken: false

@@ -37,7 +37,7 @@ spec:
             cpu: 500m
             memory: 512Mi
         hpaSpec:
-          minReplicas: 1
+          minReplicas: 2
           maxReplicas: 3
   values:
     global:

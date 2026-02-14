@@ -168,6 +168,32 @@ spec:
     scaleDown:
       stabilizationWindowSeconds: 300
 ---
+# Admin - scales with dashboard/management traffic
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: admin-hpa
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: admin
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+---
 # Frontend - scales with user traffic
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
