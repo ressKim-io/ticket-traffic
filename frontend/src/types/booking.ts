@@ -23,7 +23,7 @@ export interface BookingResponse {
   gameId: number;
   status: BookingStatus;
   totalPrice: number;
-  holdExpiresAt: string;
+  holdExpiresAt: string | null;
   seats: BookingSeatInfo[];
   createdAt: string;
 }

@@ -58,6 +58,7 @@ export function useConfirmBooking() {
     onSuccess: (res, bookingId) => {
       if (res.success) {
         queryClient.invalidateQueries({ queryKey: ["booking", bookingId] });
+        queryClient.invalidateQueries({ queryKey: ["bookings"] });
       }
     },
   });
@@ -79,6 +80,7 @@ export function useCancelBooking() {
     onSuccess: (res, bookingId) => {
       if (res.success) {
         queryClient.invalidateQueries({ queryKey: ["booking", bookingId] });
+        queryClient.invalidateQueries({ queryKey: ["bookings"] });
       }
     },
   });

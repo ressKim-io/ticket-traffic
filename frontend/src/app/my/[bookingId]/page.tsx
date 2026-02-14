@@ -5,32 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AuthGuard } from "@/components/auth";
 import { useBooking, useCancelBooking } from "@/hooks";
-import { getErrorMessage } from "@/lib";
-import type { BookingStatus } from "@/types";
-
-const statusConfig: Record<
-  BookingStatus,
-  { label: string; bg: string; text: string; border: string }
-> = {
-  PENDING: {
-    label: "Pending Payment",
-    bg: "bg-yellow-50",
-    text: "text-yellow-800",
-    border: "border-yellow-200",
-  },
-  CONFIRMED: {
-    label: "Confirmed",
-    bg: "bg-green-50",
-    text: "text-green-800",
-    border: "border-green-200",
-  },
-  CANCELLED: {
-    label: "Cancelled",
-    bg: "bg-gray-50",
-    text: "text-gray-600",
-    border: "border-gray-200",
-  },
-};
+import { getErrorMessage, BOOKING_STATUS_CONFIG } from "@/lib";
 
 function BookingDetail() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -99,7 +74,7 @@ function BookingDetail() {
     );
   }
 
-  const config = statusConfig[booking.status];
+  const config = BOOKING_STATUS_CONFIG[booking.status];
   const createdDate = new Date(booking.createdAt).toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",

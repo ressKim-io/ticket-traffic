@@ -1,38 +1,13 @@
-"use client";
-
 import Link from "next/link";
+import { BOOKING_STATUS_CONFIG } from "@/lib";
 import type { BookingResponse } from "@/types";
-
-const statusConfig: Record<
-  string,
-  { label: string; bg: string; text: string; dot: string }
-> = {
-  PENDING: {
-    label: "Pending",
-    bg: "bg-yellow-50",
-    text: "text-yellow-800",
-    dot: "bg-yellow-400",
-  },
-  CONFIRMED: {
-    label: "Confirmed",
-    bg: "bg-green-50",
-    text: "text-green-800",
-    dot: "bg-green-400",
-  },
-  CANCELLED: {
-    label: "Cancelled",
-    bg: "bg-gray-50",
-    text: "text-gray-600",
-    dot: "bg-gray-400",
-  },
-};
 
 interface BookingCardProps {
   booking: BookingResponse;
 }
 
 export function BookingCard({ booking }: BookingCardProps) {
-  const config = statusConfig[booking.status] ?? statusConfig.CANCELLED;
+  const config = BOOKING_STATUS_CONFIG[booking.status];
   const date = new Date(booking.createdAt);
   const formattedDate = date.toLocaleDateString("ko-KR", {
     year: "numeric",
