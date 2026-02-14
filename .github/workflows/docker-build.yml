@@ -8,6 +8,12 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+  security-events: write
+
 env:
   AWS_REGION: ap-northeast-2
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
@@ -99,6 +105,46 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/sportstix/${{ matrix.service }}:${{ github.sha }}
+          severity: CRITICAL
+          exit-code: 1
+          format: sarif
+          output: trivy-image-results.sarif
+
+      - name: Upload Trivy results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image-results.sarif
+          category: ${{ matrix.service }}
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.ECR_REGISTRY }}/sportstix/${{ matrix.service }}:${{ github.sha }}
+          format: cyclonedx-json
+          output-file: sbom-${{ matrix.service }}.cdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}
+          path: sbom-${{ matrix.service }}.cdx.json
+          retention-days: 90
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image with Cosign (keyless)
+        run: |
+          IMAGE="${{ env.ECR_REGISTRY }}/sportstix/${{ matrix.service }}:${{ github.sha }}"
+          cosign sign --yes "$IMAGE"
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+
   # Build and push frontend image
   build-frontend:
     needs: changes
@@ -129,3 +175,43 @@ jobs:
             ${{ env.ECR_REGISTRY }}/sportstix/frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/sportstix/frontend:${{ github.sha }}
+          severity: CRITICAL
+          exit-code: 1
+          format: sarif
+          output: trivy-frontend-results.sarif
+
+      - name: Upload Trivy results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-frontend-results.sarif
+          category: frontend
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.ECR_REGISTRY }}/sportstix/frontend:${{ github.sha }}
+          format: cyclonedx-json
+          output-file: sbom-frontend.cdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-frontend
+          path: sbom-frontend.cdx.json
+          retention-days: 90
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image with Cosign (keyless)
+        run: |
+          IMAGE="${{ env.ECR_REGISTRY }}/sportstix/frontend:${{ github.sha }}"
+          cosign sign --yes "$IMAGE"
+        env:
+          COSIGN_EXPERIMENTAL: "true"
