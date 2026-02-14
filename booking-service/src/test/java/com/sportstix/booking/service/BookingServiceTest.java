@@ -115,7 +115,7 @@ class BookingServiceTest {
         Booking booking = Booking.builder().userId(userId).gameId(10L).build();
         booking.addSeat(1L, BigDecimal.valueOf(50000));
 
-        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdWithSeats(1L)).thenReturn(Optional.of(booking));
         when(seatJooqRepository.bulkUpdateStatus(any(), eq("HELD"), eq("RESERVED"))).thenReturn(1);
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -128,7 +128,7 @@ class BookingServiceTest {
     @Test
     void confirmBooking_wrongUser_throwsForbidden() {
         Booking booking = Booking.builder().userId(100L).gameId(10L).build();
-        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdWithSeats(1L)).thenReturn(Optional.of(booking));
 
         assertThatThrownBy(() -> bookingService.confirmBooking(1L, 999L))
                 .isInstanceOf(BusinessException.class)
@@ -142,7 +142,7 @@ class BookingServiceTest {
         booking.addSeat(1L, BigDecimal.valueOf(50000));
         booking.addSeat(2L, BigDecimal.valueOf(50000));
 
-        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdWithSeats(1L)).thenReturn(Optional.of(booking));
         when(seatJooqRepository.bulkUpdateStatus(any(), eq("HELD"), eq("RESERVED"))).thenReturn(1);
 
         assertThatThrownBy(() -> bookingService.confirmBooking(1L, userId))
@@ -156,7 +156,7 @@ class BookingServiceTest {
         Booking booking = Booking.builder().userId(userId).gameId(10L).build();
         booking.addSeat(1L, BigDecimal.valueOf(50000));
 
-        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdWithSeats(1L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Booking result = bookingService.cancelBooking(1L, userId);
@@ -172,7 +172,7 @@ class BookingServiceTest {
         Booking booking = Booking.builder().userId(userId).gameId(10L).build();
         booking.cancel();
 
-        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdWithSeats(1L)).thenReturn(Optional.of(booking));
 
         Booking result = bookingService.cancelBooking(1L, userId);
 
@@ -183,7 +183,7 @@ class BookingServiceTest {
     @Test
     void cancelBooking_wrongUser_throwsForbidden() {
         Booking booking = Booking.builder().userId(100L).gameId(10L).build();
-        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdWithSeats(1L)).thenReturn(Optional.of(booking));
 
         assertThatThrownBy(() -> bookingService.cancelBooking(1L, 999L))
                 .isInstanceOf(BusinessException.class)
@@ -193,7 +193,7 @@ class BookingServiceTest {
     @Test
     void getBooking_wrongUser_throwsForbidden() {
         Booking booking = Booking.builder().userId(100L).gameId(10L).build();
-        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdWithSeats(1L)).thenReturn(Optional.of(booking));
 
         assertThatThrownBy(() -> bookingService.getBooking(1L, 999L))
                 .isInstanceOf(BusinessException.class)
