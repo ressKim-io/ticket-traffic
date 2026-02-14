@@ -21,5 +21,8 @@ public interface LocalGameSeatRepository extends JpaRepository<LocalGameSeat, Lo
     long countByGameIdAndStatus(@Param("gameId") Long gameId,
                                 @Param("status") String status);
 
+    @Query("SELECT s FROM LocalGameSeat s WHERE s.status = :status")
+    List<LocalGameSeat> findByStatus(@Param("status") String status);
+
     void deleteByGameId(Long gameId);
 }
