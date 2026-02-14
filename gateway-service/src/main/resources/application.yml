@@ -81,6 +81,7 @@ logging:
     org.springframework.cloud.gateway: WARN
     reactor.netty: WARN
 
+# DEV-ONLY defaults: override via environment variables in production
 gateway:
   jwt:
     public-key: ${JWT_PUBLIC_KEY:-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2wGPWLbDgsFrgEgI4RlFkQx8My84lANQxEl2LAdbxdfpcgsIRFmU2qQhHeOZdx7CYU6xTzdrCCavHHH4evaciXfAIy+a28EOOC2tKu8stEjWFBj9X+ezFBpdiCrjpr4IIy1jPGKaOY/d7qlsLDFcoML1yog6JXLiz9TlDNwmGVsTv8xJFpffe+H0PqBDbRDyaPts0e1C624T2KHtmyuqaEmJEyOSeS2U+KFAxldmOuhb744u2njMQKffO6ogoYNtZkrq1lYFkzah1GeZWkrxVemRZT0IscGVrEJuzEIhkW7AEkrdJGebofU78jlfJhnsU05wdCAUWzSYnF52YryWKQIDAQAB\n-----END PUBLIC KEY-----}

@@ -90,6 +90,11 @@ public class JwtTokenProvider {
     }
 
     private static PrivateKey parsePrivateKey(String pem) {
+        if (pem.contains("BEGIN RSA PRIVATE KEY")) {
+            throw new IllegalStateException(
+                    "RSA private key must be in PKCS#8 format (BEGIN PRIVATE KEY). " +
+                    "Convert with: openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in key.pem -out key-pkcs8.pem");
+        }
         try {
             String base64 = pem
                     .replace("-----BEGIN PRIVATE KEY-----", "")
@@ -99,7 +104,7 @@ public class JwtTokenProvider {
             PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoded);
             return KeyFactory.getInstance("RSA").generatePrivate(spec);
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to parse RSA private key", e);
+            throw new IllegalStateException("Failed to parse RSA private key (expected PKCS#8 PEM format)", e);
         }
     }
 
