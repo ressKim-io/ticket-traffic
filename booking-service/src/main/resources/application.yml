@@ -4,8 +4,8 @@ spring:
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sportstix_booking}
-    username: ${SPRING_DATASOURCE_USERNAME:sportstix}
-    password: ${SPRING_DATASOURCE_PASSWORD:sportstix}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
