@@ -1,0 +1,90 @@
+# NetworkChaos: gateway to backend latency injection
+# Tests Istio outlier detection and circuit breaking
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: gateway-backend-latency
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    chaos-mesh.org/experiment-type: network-delay
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - sportstix
+    labelSelectors:
+      app.kubernetes.io/name: gateway
+  delay:
+    latency: "200ms"
+    jitter: "50ms"
+    correlation: "25"
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - sportstix
+      labelSelectors:
+        sportstix.io/tier: backend
+    mode: all
+  duration: "120s"
+---
+# NetworkChaos: booking to PostgreSQL network partition
+# Tests HikariCP connection pool alerting and recovery
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: booking-db-partition
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    chaos-mesh.org/experiment-type: network-partition
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - sportstix
+    labelSelectors:
+      app.kubernetes.io/name: booking
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - sportstix
+      labelSelectors:
+        app.kubernetes.io/name: postgres
+    mode: all
+  duration: "60s"
+---
+# NetworkChaos: payment to Kafka packet loss
+# Tests Kafka retry and idempotency mechanisms
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: payment-packet-loss
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    chaos-mesh.org/experiment-type: network-loss
+spec:
+  action: loss
+  mode: all
+  selector:
+    namespaces:
+      - sportstix
+    labelSelectors:
+      app.kubernetes.io/name: payment
+  loss:
+    loss: "10"
+    correlation: "25"
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - sportstix
+      labelSelectors:
+        app.kubernetes.io/name: kafka
+    mode: all
+  duration: "120s"

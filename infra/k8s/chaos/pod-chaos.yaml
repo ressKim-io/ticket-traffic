@@ -1,0 +1,58 @@
+# PodChaos: booking pod kill
+# Tests PDB + KEDA recovery behavior
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: booking-pod-kill
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    chaos-mesh.org/experiment-type: pod-kill
+spec:
+  action: pod-kill
+  mode: one
+  gracePeriod: 0
+  selector:
+    namespaces:
+      - sportstix
+    labelSelectors:
+      app.kubernetes.io/name: booking
+---
+# PodChaos: payment pod kill
+# Tests PDB behavior under pod failure
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: payment-pod-kill
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    chaos-mesh.org/experiment-type: pod-kill
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces:
+      - sportstix
+    labelSelectors:
+      app.kubernetes.io/name: payment
+---
+# PodChaos: booking container failure
+# Tests container crash restart and recovery time
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: booking-pod-failure
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+    chaos-mesh.org/experiment-type: pod-failure
+spec:
+  action: pod-failure
+  mode: one
+  duration: "60s"
+  selector:
+    namespaces:
+      - sportstix
+    labelSelectors:
+      app.kubernetes.io/name: booking

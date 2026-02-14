@@ -1,0 +1,66 @@
+# Resilience validation workflow
+# Serial 4-step chaos experiment for comprehensive resilience testing
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: resilience-validation
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+spec:
+  entry: resilience-test
+  templates:
+    - name: resilience-test
+      templateType: Serial
+      deadline: 600s
+      children:
+        - booking-pod-kill-step
+        - recovery-wait-90s
+        - gateway-latency-step
+        - final-recovery-60s
+    # Step 1: Kill a booking pod
+    - name: booking-pod-kill-step
+      templateType: PodChaos
+      deadline: 30s
+      podChaos:
+        action: pod-kill
+        mode: one
+        gracePeriod: 0
+        selector:
+          namespaces:
+            - sportstix
+          labelSelectors:
+            app.kubernetes.io/name: booking
+    # Step 2: Wait for recovery (PDB + KEDA should restore)
+    - name: recovery-wait-90s
+      templateType: Suspend
+      deadline: 90s
+    # Step 3: Inject latency from gateway to backend
+    - name: gateway-latency-step
+      templateType: NetworkChaos
+      deadline: 120s
+      networkChaos:
+        action: delay
+        mode: all
+        selector:
+          namespaces:
+            - sportstix
+          labelSelectors:
+            app.kubernetes.io/name: gateway
+        delay:
+          latency: "150ms"
+          jitter: "30ms"
+          correlation: "25"
+        direction: to
+        target:
+          selector:
+            namespaces:
+              - sportstix
+            labelSelectors:
+              sportstix.io/tier: backend
+          mode: all
+        duration: "120s"
+    # Step 4: Final recovery wait
+    - name: final-recovery-60s
+      templateType: Suspend
+      deadline: 60s
