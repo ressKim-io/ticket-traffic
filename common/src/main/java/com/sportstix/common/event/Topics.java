@@ -27,4 +27,11 @@ public final class Topics {
     // Game
     public static final String GAME_SEAT_INITIALIZED = "ticket.game.seat-initialized";
     public static final String GAME_INFO_UPDATED = "ticket.game.info-updated";
+
+    // Dead Letter Topics (DLT) - suffix: .DLT
+    public static final String DLT_SUFFIX = ".DLT";
+
+    public static String dlt(String topic) {
+        return topic + DLT_SUFFIX;
+    }
 }
