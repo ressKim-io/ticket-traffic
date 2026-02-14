@@ -113,6 +113,13 @@ spec:
       interval: 10s
       baseEjectionTime: 30s
       maxEjectionPercent: 50
+  subsets:
+    - name: stable
+      labels:
+        app.kubernetes.io/name: booking
+    - name: canary
+      labels:
+        app.kubernetes.io/name: booking
 ---
 apiVersion: networking.istio.io/v1
 kind: DestinationRule
