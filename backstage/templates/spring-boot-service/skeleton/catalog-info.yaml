@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.serviceName }}
+  description: ${{ values.description }}
+  annotations:
+    backstage.io/kubernetes-id: ${{ values.serviceName }}
+    backstage.io/kubernetes-namespace: sportstix
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - java
+    - spring-boot
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: sportstix

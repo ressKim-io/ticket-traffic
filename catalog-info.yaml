@@ -1,0 +1,322 @@
+# Backstage Service Catalog - SportsTix Platform
+# https://backstage.io/docs/features/software-catalog/descriptor-format
+
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: sportstix
+  description: High-traffic sports ticketing platform with event-driven MSA
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: ressKim-io/ticket-traffic
+  tags:
+    - java
+    - spring-boot
+    - nextjs
+    - kafka
+    - kubernetes
+  links:
+    - url: https://sportstix.io
+      title: Production
+    - url: https://github.com/ressKim-io/ticket-traffic
+      title: GitHub Repository
+spec:
+  owner: platform-team
+  domain: ticketing
+---
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: ticketing
+  description: Sports event ticketing domain
+spec:
+  owner: platform-team
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: api-gateway
+  description: API Gateway with JWT validation, rate limiting, and request routing
+  annotations:
+    backstage.io/kubernetes-id: gateway
+    backstage.io/kubernetes-namespace: sportstix
+    prometheus.io/rule: |
+      sum(rate(http_server_requests_seconds_count{service="gateway"}[5m]))
+  tags:
+    - java
+    - spring-cloud-gateway
+    - webflux
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  dependsOn:
+    - component:auth-service
+    - component:game-service
+    - component:queue-service
+    - component:booking-service
+    - component:payment-service
+  providesApis:
+    - gateway-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: auth-service
+  description: Authentication service with JWT token issuance and validation
+  annotations:
+    backstage.io/kubernetes-id: auth
+    backstage.io/kubernetes-namespace: sportstix
+  tags:
+    - java
+    - spring-security
+    - jwt
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  providesApis:
+    - auth-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: game-service
+  description: Game and venue management with stadium/section/seat hierarchy
+  annotations:
+    backstage.io/kubernetes-id: game
+    backstage.io/kubernetes-namespace: sportstix
+  tags:
+    - java
+    - jpa
+    - postgresql
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  providesApis:
+    - game-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: queue-service
+  description: Virtual waiting room with Redis sorted set and WebSocket real-time updates
+  annotations:
+    backstage.io/kubernetes-id: queue
+    backstage.io/kubernetes-namespace: sportstix
+  tags:
+    - java
+    - redis
+    - websocket
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  consumesApis:
+    - game-api
+  providesApis:
+    - queue-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: booking-service
+  description: Ticket booking with 3-tier locking (Redis/DB pessimistic/optimistic) and SAGA orchestration
+  annotations:
+    backstage.io/kubernetes-id: booking
+    backstage.io/kubernetes-namespace: sportstix
+  tags:
+    - java
+    - jooq
+    - saga
+    - kafka
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  consumesApis:
+    - game-api
+    - payment-api
+  providesApis:
+    - booking-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payment-service
+  description: Payment processing with mock PG integration and Kafka event-driven flow
+  annotations:
+    backstage.io/kubernetes-id: payment
+    backstage.io/kubernetes-namespace: sportstix
+  tags:
+    - java
+    - jooq
+    - kafka
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  providesApis:
+    - payment-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: admin-service
+  description: Admin dashboard with game management, statistics, and monitoring
+  annotations:
+    backstage.io/kubernetes-id: admin
+    backstage.io/kubernetes-namespace: sportstix
+  tags:
+    - java
+    - spring-boot
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  providesApis:
+    - admin-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: frontend
+  description: Next.js 14 frontend with App Router, Zustand, TanStack Query, and Tailwind CSS
+  annotations:
+    backstage.io/kubernetes-id: frontend
+    backstage.io/kubernetes-namespace: sportstix
+  tags:
+    - nextjs
+    - react
+    - typescript
+    - tailwind
+spec:
+  type: website
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  consumesApis:
+    - gateway-api
+---
+# API definitions
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: gateway-api
+  description: SportsTix API Gateway endpoints
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: SportsTix Gateway API
+      version: 1.0.0
+    servers:
+      - url: https://api.sportstix.io
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: auth-api
+  description: Authentication and authorization API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Auth Service API
+      version: 1.0.0
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: game-api
+  description: Game and venue management API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Game Service API
+      version: 1.0.0
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: queue-api
+  description: Virtual waiting room queue API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Queue Service API
+      version: 1.0.0
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: booking-api
+  description: Ticket booking and reservation API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Booking Service API
+      version: 1.0.0
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: payment-api
+  description: Payment processing API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Payment Service API
+      version: 1.0.0
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: admin-api
+  description: Admin dashboard and management API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: sportstix
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Admin Service API
+      version: 1.0.0
