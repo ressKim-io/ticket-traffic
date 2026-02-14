@@ -111,7 +111,7 @@ public class JwtTokenProvider {
                     .replaceAll("\\s+", "");
             byte[] decoded = Base64.getDecoder().decode(base64);
             X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
-            return KeyFactory.getInstance("RSA").generatePublicKey(spec);
+            return KeyFactory.getInstance("RSA").generatePublic(spec);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse RSA public key", e);
         }
