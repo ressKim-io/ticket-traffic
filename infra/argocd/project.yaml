@@ -13,6 +13,7 @@ spec:
     - 'https://charts.chaos-mesh.org'
     - 'https://charts.jetstack.io'
     - 'https://falcosecurity.github.io/charts'
+    - 'https://opencost.github.io/opencost-helm-chart'
   destinations:
     - namespace: sportstix
       server: https://kubernetes.default.svc
@@ -35,6 +36,8 @@ spec:
     - namespace: cert-manager
       server: https://kubernetes.default.svc
     - namespace: falco
+      server: https://kubernetes.default.svc
+    - namespace: opencost
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ''
