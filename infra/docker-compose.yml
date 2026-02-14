@@ -77,7 +77,110 @@ services:
       kafka:
         condition: service_healthy
 
+  # ============================================
+  # Observability Stack
+  # ============================================
+
+  # OTel Collector - receives traces from services, forwards to Tempo
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.0
+    container_name: sportstix-otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:4317:4317"   # OTLP gRPC
+      - "127.0.0.1:4318:4318"   # OTLP HTTP
+      - "127.0.0.1:13133:13133" # Health check
+    depends_on:
+      - tempo
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:13133"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Grafana Tempo - distributed tracing backend
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: sportstix-tempo
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    volumes:
+      - ./otel/tempo-config.yaml:/etc/tempo/config.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "127.0.0.1:3200:3200"   # Tempo API
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # Grafana Loki - log aggregation
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: sportstix-loki
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./otel/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Promtail - collects Docker container logs and ships to Loki
+  promtail:
+    image: grafana/promtail:3.3.2
+    container_name: sportstix-promtail
+    command: ["-config.file=/etc/promtail/config.yaml"]
+    volumes:
+      - ./otel/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  # Grafana - observability dashboard
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: sportstix-grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor tempoServiceGraph
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      - tempo
+      - loki
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
 volumes:
   postgres_data:
   redis_data:
   kafka_data:
+  tempo_data:
+  loki_data:
+  grafana_data:

@@ -56,3 +56,9 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+
+logging:
+  level:
+    com.sportstix: INFO
+    org.hibernate.SQL: WARN
+    org.apache.kafka: WARN

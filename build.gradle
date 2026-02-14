@@ -33,6 +33,9 @@ subprojects {
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
 
+        // Structured JSON logging (used by logback-spring.xml)
+        implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
     }
 

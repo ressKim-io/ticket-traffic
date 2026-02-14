@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="game-service"/>
+
+    <appender name="CONSOLE_TEXT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] [%X{traceId:-}/%X{spanId:-}] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+            <includeMdcKeyName>traceFlags</includeMdcKeyName>
+            <fieldNames>
+                <timestamp>@timestamp</timestamp>
+                <version>[ignore]</version>
+            </fieldNames>
+            <customFields>{"service":"${APP_NAME}"}</customFields>
+        </encoder>
+    </appender>
+
+    <springProfile name="default | local">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_TEXT"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="docker | k8s">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+        <logger name="org.hibernate.SQL" level="WARN"/>
+        <logger name="org.apache.kafka" level="WARN"/>
+    </springProfile>
+</configuration>

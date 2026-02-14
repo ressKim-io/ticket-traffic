@@ -63,6 +63,13 @@ management:
     circuitbreakers:
       enabled: true
 
+logging:
+  level:
+    com.sportstix: INFO
+    org.hibernate.SQL: WARN
+    org.jooq: WARN
+    org.apache.kafka: WARN
+
 resilience4j:
   circuitbreaker:
     circuitBreakerAspectOrder: 3

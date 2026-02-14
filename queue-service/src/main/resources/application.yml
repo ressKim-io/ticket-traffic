@@ -29,6 +29,12 @@ management:
     health:
       show-details: when_authorized
 
+logging:
+  level:
+    com.sportstix: INFO
+    org.apache.kafka: WARN
+    io.lettuce.core: WARN
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

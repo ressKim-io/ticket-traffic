@@ -33,6 +33,10 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
+# Download OTel Java Agent (zero-code instrumentation)
+ARG OTEL_AGENT_VERSION=2.11.0
+ADD --chmod=444 https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
+
 ARG SERVICE_NAME
 COPY --from=builder /app/${SERVICE_NAME}/build/libs/*.jar app.jar
 RUN chown appuser:appgroup app.jar
@@ -40,7 +44,9 @@ RUN chown appuser:appgroup app.jar
 USER appuser
 
 # JVM defaults - override via JAVA_OPTS env var
-ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
+# OTel Agent auto-instruments Spring Boot, Kafka, Redis, JDBC, jOOQ, WebSocket
+ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom -javaagent:/app/opentelemetry-javaagent.jar"
+ENV OTEL_JAVAAGENT_TEMPDIR=/tmp
 
 EXPOSE 8080
 
