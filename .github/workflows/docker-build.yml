@@ -13,8 +13,26 @@ env:
   ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
 
 jobs:
+  # Pre-flight: check if AWS credentials are configured
+  check-credentials:
+    runs-on: ubuntu-latest
+    outputs:
+      has-aws: ${{ steps.check.outputs.has-aws }}
+    steps:
+      - name: Check AWS configuration
+        id: check
+        run: |
+          if [ -n "${{ vars.AWS_ROLE_ARN }}" ] && [ -n "${{ vars.ECR_REGISTRY }}" ]; then
+            echo "has-aws=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-aws=false" >> $GITHUB_OUTPUT
+            echo "::warning::Skipping Docker build - AWS_ROLE_ARN and ECR_REGISTRY not configured in repository variables"
+          fi
+
   # Detect changed services
   changes:
+    needs: check-credentials
+    if: needs.check-credentials.outputs.has-aws == 'true'
     runs-on: ubuntu-latest
     outputs:
       services: ${{ steps.detect.outputs.services }}
