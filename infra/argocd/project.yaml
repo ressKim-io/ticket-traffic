@@ -10,6 +10,7 @@ spec:
     - 'https://argoproj.github.io/argo-helm'
     - 'https://kedacore.github.io/charts'
     - 'https://vmware-tanzu.github.io/helm-charts'
+    - 'https://charts.chaos-mesh.org'
   destinations:
     - namespace: sportstix
       server: https://kubernetes.default.svc
@@ -22,6 +23,8 @@ spec:
     - namespace: keda
       server: https://kubernetes.default.svc
     - namespace: velero
+      server: https://kubernetes.default.svc
+    - namespace: chaos-mesh
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ''
