@@ -8,6 +8,7 @@ import com.sportstix.game.dto.response.GameResponse;
 import com.sportstix.game.dto.response.GameSeatResponse;
 import com.sportstix.game.service.GameService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,11 @@ public class GameController {
     private final GameService gameService;
 
     @Operation(summary = "Create game", description = "Create a new game and initialize seats from stadium")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Game created"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Stadium not found")
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<GameResponse> createGame(@Valid @RequestBody CreateGameRequest request) {
@@ -38,6 +44,10 @@ public class GameController {
     }
 
     @Operation(summary = "Get game detail", description = "Get game details with section availability")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Game found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Game not found")
+    })
     @GetMapping("/{gameId}")
     public ApiResponse<GameDetailResponse> getGame(@PathVariable Long gameId) {
         return ApiResponse.ok(gameService.getGame(gameId));
@@ -59,6 +69,10 @@ public class GameController {
     }
 
     @Operation(summary = "Get seats by section", description = "List seats for a game section with status and price")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Seats returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Game or section not found")
+    })
     @GetMapping("/{gameId}/seats")
     public ApiResponse<List<GameSeatResponse>> getGameSeats(
             @PathVariable Long gameId,

@@ -5,6 +5,7 @@ import com.sportstix.game.dto.request.CreateStadiumRequest;
 import com.sportstix.game.dto.response.StadiumResponse;
 import com.sportstix.game.service.StadiumService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,10 @@ public class StadiumController {
     private final StadiumService stadiumService;
 
     @Operation(summary = "Create stadium", description = "Create a new stadium with sections and seats")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Stadium created"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error")
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<StadiumResponse> createStadium(@Valid @RequestBody CreateStadiumRequest request) {
@@ -29,6 +34,10 @@ public class StadiumController {
     }
 
     @Operation(summary = "Get stadium", description = "Get stadium details with sections")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Stadium found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Stadium not found")
+    })
     @GetMapping("/{id}")
     public ApiResponse<StadiumResponse> getStadium(@PathVariable Long id) {
         return ApiResponse.ok(stadiumService.getStadium(id));
