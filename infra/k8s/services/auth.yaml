@@ -28,6 +28,10 @@ spec:
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: auth
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
         - name: auth
           image: sportstix/auth-service:latest
@@ -46,6 +50,11 @@ spec:
           env:
             - name: JAVA_OPTS
               value: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests:
               cpu: 100m
@@ -71,6 +80,12 @@ spec:
               port: 8081
             failureThreshold: 30
             periodSeconds: 2
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

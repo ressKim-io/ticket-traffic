@@ -28,6 +28,10 @@ spec:
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: frontend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
       containers:
         - name: frontend
           image: sportstix/frontend:latest
@@ -39,6 +43,11 @@ spec:
               value: "production"
             - name: HOSTNAME
               value: "0.0.0.0"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests:
               cpu: 50m
@@ -64,6 +73,16 @@ spec:
               port: 3000
             failureThreshold: 10
             periodSeconds: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nextjs-cache
+              mountPath: /app/.next/cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nextjs-cache
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
