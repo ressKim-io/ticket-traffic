@@ -1,5 +1,6 @@
 package com.sportstix.booking.service;
 
+import com.sportstix.booking.TestFixtures;
 import com.sportstix.booking.domain.Booking;
 import com.sportstix.booking.domain.BookingStatus;
 import com.sportstix.booking.domain.LocalGameSeat;
@@ -164,7 +165,7 @@ class DataReconciliationServiceTest {
     void reconcileExpiredPendingBookings_expiredBooking_cancelled() {
         Booking expired = Booking.builder().userId(1L).gameId(10L).build();
         // Use reflection to set ID for testing
-        setId(expired, 99L);
+        TestFixtures.setEntityId(expired, 99L);
 
         when(bookingRepository.findByStatusAndHoldExpiresAtBefore(
                 eq(BookingStatus.PENDING), any(LocalDateTime.class), any(PageRequest.class)))
@@ -180,7 +181,7 @@ class DataReconciliationServiceTest {
     @Test
     void reconcileExpiredPendingBookings_cancelFails_countsAsZero() {
         Booking expired = Booking.builder().userId(1L).gameId(10L).build();
-        setId(expired, 99L);
+        TestFixtures.setEntityId(expired, 99L);
 
         when(bookingRepository.findByStatusAndHoldExpiresAtBefore(
                 eq(BookingStatus.PENDING), any(LocalDateTime.class), any(PageRequest.class)))
@@ -210,24 +211,6 @@ class DataReconciliationServiceTest {
     }
 
     private Booking createBookingWithSeat(Long bookingId, Long seatId, BookingStatus targetStatus) {
-        Booking booking = Booking.builder().userId(1L).gameId(10L).build();
-        booking.addSeat(seatId, BigDecimal.valueOf(50000));
-        setId(booking, bookingId);
-        if (targetStatus == BookingStatus.CONFIRMED) {
-            booking.confirm();
-        } else if (targetStatus == BookingStatus.CANCELLED) {
-            booking.cancel();
-        }
-        return booking;
-    }
-
-    private void setId(Object entity, Long id) {
-        try {
-            var field = entity.getClass().getDeclaredField("id");
-            field.setAccessible(true);
-            field.set(entity, id);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return TestFixtures.createBookingWithSeat(bookingId, seatId, 1L, 10L, targetStatus);
     }
 }

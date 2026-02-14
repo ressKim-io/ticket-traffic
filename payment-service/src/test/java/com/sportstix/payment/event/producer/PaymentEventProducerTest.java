@@ -1,6 +1,7 @@
 package com.sportstix.payment.event.producer;
 
 import com.sportstix.common.event.Topics;
+import com.sportstix.payment.TestFixtures;
 import com.sportstix.payment.domain.Payment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,18 +67,6 @@ class PaymentEventProducerTest {
     }
 
     private Payment createPayment(Long id, Long bookingId, Long userId, BigDecimal amount) {
-        Payment payment = Payment.builder()
-                .bookingId(bookingId)
-                .userId(userId)
-                .amount(amount)
-                .build();
-        try {
-            var field = Payment.class.getDeclaredField("id");
-            field.setAccessible(true);
-            field.set(payment, id);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return payment;
+        return TestFixtures.createPaymentWithId(id, bookingId, userId, amount);
     }
 }

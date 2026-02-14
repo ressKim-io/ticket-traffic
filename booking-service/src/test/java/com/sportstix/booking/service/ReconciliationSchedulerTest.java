@@ -10,6 +10,7 @@ import org.redisson.api.RedissonClient;
 
 import java.util.concurrent.TimeUnit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -79,5 +80,7 @@ class ReconciliationSchedulerTest {
         scheduler.runReconciliation();
 
         verify(reconciliationService, never()).reconcileStaleHeldSeats();
+        // Thread.interrupted() returns true and clears the flag
+        assertThat(Thread.interrupted()).isTrue();
     }
 }

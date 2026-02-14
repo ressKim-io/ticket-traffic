@@ -18,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -43,7 +42,6 @@ class BookingConcurrencyTest {
     @Mock private SeatLockService seatLockService;
     @Mock private BookingEventProducer bookingEventProducer;
     @Mock private BookingTransactionService transactionService;
-    @Mock private RedissonClient redissonClient;
 
     private BookingService bookingService;
 

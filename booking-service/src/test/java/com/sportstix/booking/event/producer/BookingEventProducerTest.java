@@ -1,5 +1,6 @@
 package com.sportstix.booking.event.producer;
 
+import com.sportstix.booking.TestFixtures;
 import com.sportstix.booking.domain.Booking;
 import com.sportstix.common.event.Topics;
 import org.junit.jupiter.api.Test;
@@ -81,14 +82,6 @@ class BookingEventProducerTest {
     }
 
     private Booking createBooking(Long id, Long userId, Long gameId) {
-        Booking booking = Booking.builder().userId(userId).gameId(gameId).build();
-        try {
-            var field = Booking.class.getDeclaredField("id");
-            field.setAccessible(true);
-            field.set(booking, id);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return booking;
+        return TestFixtures.createBookingWithId(id, userId, gameId);
     }
 }

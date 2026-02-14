@@ -1,5 +1,6 @@
 package com.sportstix.booking.scheduler;
 
+import com.sportstix.booking.TestFixtures;
 import com.sportstix.booking.domain.Booking;
 import com.sportstix.booking.domain.BookingStatus;
 import com.sportstix.booking.repository.BookingRepository;
@@ -78,15 +79,8 @@ class HoldExpirySchedulerTest {
     }
 
     private Booking createBooking(Long id) {
-        Booking booking = Booking.builder().userId(1L).gameId(10L).build();
+        Booking booking = TestFixtures.createBookingWithId(id, 1L, 10L);
         booking.addSeat(100L + id, BigDecimal.valueOf(50000));
-        try {
-            var field = Booking.class.getDeclaredField("id");
-            field.setAccessible(true);
-            field.set(booking, id);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
         return booking;
     }
 }
