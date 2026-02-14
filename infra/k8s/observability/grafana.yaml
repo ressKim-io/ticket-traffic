@@ -78,7 +78,7 @@ spec:
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
               value: Viewer
             - name: GF_AUTH_DISABLE_LOGIN_FORM
-              value: "true"
+              value: "false"
             - name: GF_FEATURE_TOGGLES_ENABLE
               value: traceqlEditor tempoServiceGraph
           securityContext:
@@ -115,7 +115,23 @@ spec:
           configMap:
             name: grafana-datasources
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: grafana-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: sportstix
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
