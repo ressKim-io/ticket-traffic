@@ -15,6 +15,8 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springframework.boot:spring-boot-starter-jooq'
+    implementation 'net.javacrumbs.shedlock:shedlock-spring:5.13.0'
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.13.0'
 
     jooqGenerator 'org.jooq:jooq-meta-extensions:3.19.8'
     jooqGenerator 'com.h2database:h2'

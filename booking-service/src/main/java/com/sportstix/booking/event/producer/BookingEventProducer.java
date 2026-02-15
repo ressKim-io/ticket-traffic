@@ -1,20 +1,25 @@
 package com.sportstix.booking.event.producer;
 
+import com.sportstix.booking.domain.Booking;
+import com.sportstix.booking.domain.BookingSeat;
+import com.sportstix.booking.event.outbox.OutboxEventService;
 import com.sportstix.common.event.BookingEvent;
 import com.sportstix.common.event.SeatEvent;
 import com.sportstix.common.event.Topics;
-import com.sportstix.booking.domain.Booking;
-import com.sportstix.booking.domain.BookingSeat;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+/**
+ * Saves booking/seat events to the outbox table instead of publishing directly.
+ * Events are published to Kafka asynchronously by OutboxPollingPublisher.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class BookingEventProducer {
 
-    private final ResilientKafkaPublisher publisher;
+    private final OutboxEventService outboxEventService;
 
     public void publishBookingCreated(Booking booking) {
         String key = String.valueOf(booking.getGameId());
@@ -23,7 +28,8 @@ public class BookingEventProducer {
                     booking.getId(), booking.getUserId(),
                     booking.getGameId(), seat.getGameSeatId(),
                     booking.getTotalPrice());
-            publisher.publish(Topics.BOOKING_CREATED, key, event, "booking-created");
+            outboxEventService.save("Booking", String.valueOf(booking.getId()),
+                    "BOOKING_CREATED", Topics.BOOKING_CREATED, key, event);
         }
     }
 
@@ -33,7 +39,8 @@ public class BookingEventProducer {
             BookingEvent event = BookingEvent.confirmed(
                     booking.getId(), booking.getUserId(),
                     booking.getGameId(), seat.getGameSeatId());
-            publisher.publish(Topics.BOOKING_CONFIRMED, key, event, "booking-confirmed");
+            outboxEventService.save("Booking", String.valueOf(booking.getId()),
+                    "BOOKING_CONFIRMED", Topics.BOOKING_CONFIRMED, key, event);
         }
     }
 
@@ -43,7 +50,8 @@ public class BookingEventProducer {
             BookingEvent event = BookingEvent.cancelled(
                     booking.getId(), booking.getUserId(),
                     booking.getGameId(), seat.getGameSeatId());
-            publisher.publish(Topics.BOOKING_CANCELLED, key, event, "booking-cancelled");
+            outboxEventService.save("Booking", String.valueOf(booking.getId()),
+                    "BOOKING_CANCELLED", Topics.BOOKING_CANCELLED, key, event);
         }
     }
 
@@ -52,7 +60,8 @@ public class BookingEventProducer {
         for (BookingSeat seat : booking.getBookingSeats()) {
             SeatEvent event = SeatEvent.held(
                     booking.getGameId(), seat.getGameSeatId(), booking.getUserId());
-            publisher.publish(Topics.SEAT_HELD, key, event, "seat-held");
+            outboxEventService.save("Seat", String.valueOf(seat.getGameSeatId()),
+                    "SEAT_HELD", Topics.SEAT_HELD, key, event);
         }
     }
 
@@ -61,7 +70,8 @@ public class BookingEventProducer {
         for (BookingSeat seat : booking.getBookingSeats()) {
             SeatEvent event = SeatEvent.released(
                     booking.getGameId(), seat.getGameSeatId(), booking.getUserId());
-            publisher.publish(Topics.SEAT_RELEASED, key, event, "seat-released");
+            outboxEventService.save("Seat", String.valueOf(seat.getGameSeatId()),
+                    "SEAT_RELEASED", Topics.SEAT_RELEASED, key, event);
         }
     }
 }

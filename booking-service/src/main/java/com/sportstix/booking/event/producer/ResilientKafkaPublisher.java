@@ -44,6 +44,7 @@ public class ResilientKafkaPublisher {
     void publishFallback(String topic, String key, Object event, String eventName, Throwable t) {
         log.error("Circuit breaker open for Kafka producer. Event dropped: {} topic={} key={}",
                 eventName, topic, key, t);
-        // TODO: persist to outbox table for later retry
+        // Reconciliation events bypass outbox intentionally:
+        // next reconciliation cycle will re-detect and re-try.
     }
 }
