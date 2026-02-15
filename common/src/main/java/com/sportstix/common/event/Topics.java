@@ -31,6 +31,13 @@ public final class Topics {
     // Dead Letter Topics (DLT) - suffix: .DLT
     public static final String DLT_SUFFIX = ".DLT";
 
+    // Partition counts per topic category
+    public static final int PARTITIONS_BOOKING = 8;
+    public static final int PARTITIONS_SEAT = 8;
+    public static final int PARTITIONS_PAYMENT = 6;
+    public static final int PARTITIONS_QUEUE = 4;
+    public static final int PARTITIONS_GAME = 3;
+
     public static String dlt(String topic) {
         return topic + DLT_SUFFIX;
     }

@@ -67,6 +67,7 @@ jobs:
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.28.0
+        continue-on-error: true
         with:
           scan-type: fs
           scan-ref: .

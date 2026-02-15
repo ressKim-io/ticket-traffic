@@ -25,7 +25,7 @@ public class BookingSagaOrchestrator {
     private final CompensationHandler compensationHandler;
     private final IdempotencyService idempotencyService;
 
-    @KafkaListener(topics = Topics.PAYMENT_COMPLETED, groupId = "booking-saga")
+    @KafkaListener(topics = Topics.PAYMENT_COMPLETED, groupId = "booking-saga", concurrency = "6")
     public void onPaymentCompleted(PaymentEvent event) {
         if (idempotencyService.isDuplicate(event.getEventId(), Topics.PAYMENT_COMPLETED)) {
             log.debug("Duplicate payment-completed event skipped: eventId={}", event.getEventId());
@@ -47,7 +47,7 @@ public class BookingSagaOrchestrator {
         idempotencyService.markProcessed(event.getEventId(), Topics.PAYMENT_COMPLETED);
     }
 
-    @KafkaListener(topics = Topics.PAYMENT_FAILED, groupId = "booking-saga")
+    @KafkaListener(topics = Topics.PAYMENT_FAILED, groupId = "booking-saga", concurrency = "6")
     public void onPaymentFailed(PaymentEvent event) {
         if (idempotencyService.isDuplicate(event.getEventId(), Topics.PAYMENT_FAILED)) {
             log.debug("Duplicate payment-failed event skipped: eventId={}", event.getEventId());
@@ -61,7 +61,7 @@ public class BookingSagaOrchestrator {
         idempotencyService.markProcessed(event.getEventId(), Topics.PAYMENT_FAILED);
     }
 
-    @KafkaListener(topics = Topics.PAYMENT_REFUNDED, groupId = "booking-saga")
+    @KafkaListener(topics = Topics.PAYMENT_REFUNDED, groupId = "booking-saga", concurrency = "6")
     public void onPaymentRefunded(PaymentEvent event) {
         if (idempotencyService.isDuplicate(event.getEventId(), Topics.PAYMENT_REFUNDED)) {
             log.debug("Duplicate payment-refunded event skipped: eventId={}", event.getEventId());
