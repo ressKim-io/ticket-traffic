@@ -44,7 +44,7 @@ spring:
       properties:
         spring.json.trusted.packages: com.sportstix.common.event
     listener:
-      concurrency: 8
+      concurrency: 3
 
 springdoc:
   swagger-ui:
