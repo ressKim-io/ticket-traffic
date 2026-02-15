@@ -1,6 +1,7 @@
 package com.sportstix.booking.event.outbox;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sportstix.common.event.BookingEvent;
 import com.sportstix.common.event.Topics;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class OutboxEventServiceTest {
     private OutboxEventRepository outboxEventRepository;
 
     @Spy
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @InjectMocks
     private OutboxEventService outboxEventService;
