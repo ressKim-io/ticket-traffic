@@ -43,6 +43,8 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: com.sportstix.common.event
+    listener:
+      concurrency: 8
 
 springdoc:
   swagger-ui:
