@@ -1,8 +1,8 @@
 package com.sportstix.booking.event.outbox;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class OutboxPollingPublisher {
 
     private static final int BATCH_SIZE = 50;
@@ -27,6 +26,13 @@ public class OutboxPollingPublisher {
 
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
+
+    public OutboxPollingPublisher(
+            OutboxEventRepository outboxEventRepository,
+            @Qualifier("outboxKafkaTemplate") KafkaTemplate<String, String> kafkaTemplate) {
+        this.outboxEventRepository = outboxEventRepository;
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Scheduled(fixedDelay = 1000)
     @SchedulerLock(name = "outboxPolling", lockAtMostFor = "30s", lockAtLeastFor = "500ms")
