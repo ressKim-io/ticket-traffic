@@ -9,6 +9,7 @@ metadata:
 data:
   SERVER_PORT: "8081"
   SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.sportstix.svc.cluster.local:5432/sportstix_auth"
+  SPRING_DATASOURCE_USERNAME: "auth_user"
   OTEL_SERVICE_NAME: "auth-service"
 ---
 apiVersion: v1
@@ -22,6 +23,7 @@ metadata:
 data:
   SERVER_PORT: "8082"
   SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.sportstix.svc.cluster.local:5432/sportstix_game"
+  SPRING_DATASOURCE_USERNAME: "game_user"
   OTEL_SERVICE_NAME: "game-service"
 ---
 apiVersion: v1
@@ -47,6 +49,7 @@ metadata:
 data:
   SERVER_PORT: "8084"
   SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.sportstix.svc.cluster.local:5432/sportstix_booking"
+  SPRING_DATASOURCE_USERNAME: "booking_user"
   OTEL_SERVICE_NAME: "booking-service"
 ---
 apiVersion: v1
@@ -60,6 +63,7 @@ metadata:
 data:
   SERVER_PORT: "8085"
   SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.sportstix.svc.cluster.local:5432/sportstix_payment"
+  SPRING_DATASOURCE_USERNAME: "payment_user"
   OTEL_SERVICE_NAME: "payment-service"
 ---
 apiVersion: v1
@@ -73,4 +77,5 @@ metadata:
 data:
   SERVER_PORT: "8086"
   SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.sportstix.svc.cluster.local:5432/sportstix_admin"
+  SPRING_DATASOURCE_USERNAME: "admin_user"
   OTEL_SERVICE_NAME: "admin-service"
