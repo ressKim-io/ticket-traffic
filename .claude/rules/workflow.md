@@ -19,6 +19,7 @@ STEP 2. 구현 + 촘촘한 커밋 (1-3 files per commit)
 STEP 3. review (Critical/High 0건까지) — push 전 필수
 STEP 4. push
 STEP 5. PR 생성 (/dx:pr-create) — body에 `Closes #{issue-number}` 포함
+STEP 5.5. CI가 자동으로 PR에 Review Summary 댓글 게시 (review-summary job)
 STEP 6. CI 통과 확인 → squash merge + delete branch
 STEP 7. main 복귀 + pull — 여기까지 완료해야 다음 작업 시작 가능
 ```
