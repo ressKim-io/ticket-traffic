@@ -54,6 +54,8 @@ spec:
                 name: payment-config
             - secretRef:
                 name: db-secret
+            - secretRef:
+                name: payment-db-secret
           env:
             - name: JAVA_OPTS
               value: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
