@@ -8,11 +8,16 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_pass}
+      GAME_DB_PASSWORD: ${GAME_DB_PASSWORD:-game_pass}
+      BOOKING_DB_PASSWORD: ${BOOKING_DB_PASSWORD:-booking_pass}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-payment_pass}
+      ADMIN_DB_PASSWORD: ${ADMIN_DB_PASSWORD:-admin_pass}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
