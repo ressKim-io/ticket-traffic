@@ -58,7 +58,7 @@ STEP 1 → 2 → 3 → 4 → 5 → 6 → 7 (순서 고정, 스킵 불가)
 ```bash
 git switch main
 git pull origin main
-git switch -c feature/TICKET-{number}-description
+git switch -c feature/{issue-number}-description
 ```
 
 ---
@@ -82,8 +82,22 @@ git switch -c feature/TICKET-{number}-description
 
 ---
 
-### STEP 3. Review (push 전 필수)
-> 구현이 끝나면 push 하기 전에 반드시 리뷰를 실행한다.
+### STEP 3. Push
+```bash
+git push -u origin feature/{issue-number}-description
+```
+
+---
+
+### STEP 4. PR 생성
+> `/dx:pr-create` 실행하여 PR 자동 생성. body에 `Closes #{issue-number}` 포함.
+
+---
+
+### STEP 5. PR Code Review (핵심 단계)
+> PR 생성 직후, 변경 유형에 맞는 코드 리뷰를 실행하고 **결과를 PR 댓글로 기록**한다.
+
+**리뷰 실행 (변경 유형별)**:
 
 | 작업 유형 | 리뷰 명령어 |
 |-----------|-------------|
@@ -92,28 +106,48 @@ git switch -c feature/TICKET-{number}-description
 | Infra (K8s) | `/k8s:validate` |
 | Infra (Terraform) | `/terraform:validate` |
 
-**Critical/High 이슈 발견 시**: 반드시 수정 커밋 → 재리뷰 후 다음 단계로 진행.
-리뷰에서 Critical/High가 0이 될 때까지 STEP 4로 넘어갈 수 없다.
+- 변경된 파일 유형에 따라 해당하는 리뷰를 **모두** 실행
+- 예: Backend + K8s 동시 변경 시 → `/backend:review` + `/k8s:validate` 둘 다
 
----
-
-### STEP 4. Push
+**리뷰 결과를 PR 댓글로 게시**:
 ```bash
-git push -u origin feature/TICKET-{number}-description
+gh pr comment {number} --body "리뷰 결과 markdown"
 ```
 
+댓글 형식:
+```markdown
+## Code Review — {review-type}
+
+### Summary
+- **Critical**: {count}
+- **High**: {count}
+- **Medium**: {count}
+- **Low**: {count}
+
+### Critical Issues
+{없으면 "None" / 있으면 파일:라인 + 설명 + 수정 방안}
+
+### High Issues
+{없으면 "None" / 있으면 파일:라인 + 설명 + 수정 방안}
+
+### Medium/Low Issues
+{요약 또는 상세}
+
+### Verdict
+{✅ PASS — Critical/High 0건 | ❌ FAIL — 수정 필요}
+```
+
+**Critical/High 이슈 발견 시**: 수정 커밋 → push → 리뷰 재실행 → PR 댓글 업데이트.
+Critical/High가 0건이 될 때까지 STEP 6으로 넘어갈 수 없다.
+
 ---
 
-### STEP 5. PR 생성
-> `/dx:pr-create` 실행하여 PR 자동 생성
-
----
-
-### STEP 6. CI 확인 → Merge
-> CI가 통과할 때까지 merge하지 않는다.
+### STEP 6. CI 통과 + Review 확인 → Merge
+> CI가 통과하고, Code Review Verdict가 ✅ PASS일 때만 merge한다.
 
 ```bash
 gh pr checks {pr-number} --watch              # CI 통과 대기
+gh pr view {pr-number} --comments             # Review 댓글 Verdict 확인
 gh pr merge {pr-number} --squash --delete-branch  # squash merge + branch 정리
 ```
 
@@ -138,10 +172,10 @@ git pull origin main
 ┌─────────────────────────────────────────────────────────────────┐
 │  STEP 1. branch 생성 (main에서)                                  │
 │  STEP 2. 구현 + 촘촘한 커밋 (1-3파일마다)                         │
-│  STEP 3. review (Critical/High 0건까지)                          │
-│  STEP 4. push                                                    │
-│  STEP 5. PR 생성 (/dx:pr-create)                                 │
-│  STEP 6. CI 통과 확인 → merge (--squash --delete-branch)         │
+│  STEP 3. push                                                    │
+│  STEP 4. PR 생성 (/dx:pr-create)                                 │
+│  STEP 5. PR Code Review → PR 댓글 기록 (Critical/High 0건까지)   │
+│  STEP 6. CI 통과 + Review PASS → merge (--squash --delete-branch)│
 │  STEP 7. main 복귀 + pull                                        │
 │  ─────────── 1 사이클 완료. 다음 작업 시작 가능 ──────────────    │
 └─────────────────────────────────────────────────────────────────┘
