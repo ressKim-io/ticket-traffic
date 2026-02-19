@@ -16,20 +16,43 @@ on:
           - payment-service
           - admin-service
           - frontend
-      revision:
-        description: 'Git SHA or ArgoCD revision to rollback to'
+      sha:
+        description: 'Git SHA of the image tag to rollback to'
         required: true
         type: string
+
+permissions:
+  contents: write
+
+env:
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
 
 jobs:
   rollback:
     runs-on: ubuntu-latest
     steps:
-      - name: Rollback via ArgoCD
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install kustomize
         run: |
-          echo "Rolling back ${{ inputs.service }} to revision ${{ inputs.revision }}"
-          echo "In production, this would execute:"
-          echo "  argocd app set sportstix --kustomize-image sportstix/${{ inputs.service }}=${{ vars.ECR_REGISTRY }}/sportstix/${{ inputs.service }}:${{ inputs.revision }}"
-          echo "  argocd app sync sportstix --prune"
-          echo ""
-          echo "Alternative: ArgoCD UI -> Applications -> sportstix -> History -> Rollback"
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          mv kustomize /usr/local/bin/
+
+      - name: Rollback image tag
+        run: |
+          cd infra/k8s/services
+          IMAGE_NAME="sportstix/${{ inputs.service }}"
+          FULL_IMAGE="${{ env.ECR_REGISTRY }}/${IMAGE_NAME}:${{ inputs.sha }}"
+          echo "Rolling back ${IMAGE_NAME} to ${FULL_IMAGE}"
+          kustomize edit set image "${IMAGE_NAME}=${FULL_IMAGE}"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infra/k8s/services/kustomization.yaml
+          git diff --cached --quiet || git commit -m "rollback(k8s): revert ${{ inputs.service }} to ${{ inputs.sha }}"
+          git push

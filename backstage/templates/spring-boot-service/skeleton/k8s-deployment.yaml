@@ -31,7 +31,8 @@ spec:
           type: RuntimeDefault
       containers:
         - name: ${{ values.serviceName }}
-          image: sportstix/${{ values.serviceName }}-service:latest
+          # Tag managed by CI via kustomize edit set image
+          image: sportstix/${{ values.serviceName }}-service:SET_BY_CI
           ports:
             - containerPort: ${{ values.port }}
               name: http
