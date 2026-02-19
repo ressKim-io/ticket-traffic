@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 concurrency:
   group: pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -133,3 +137,70 @@ jobs:
             -schema-location default \
             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
             infra/k8s/
+
+  # Post CI review summary as PR comment
+  review-summary:
+    needs: [changes, backend, frontend, k8s-validate]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const backendChanged = '${{ needs.changes.outputs.backend }}' === 'true';
+            const frontendChanged = '${{ needs.changes.outputs.frontend }}' === 'true';
+            const k8sChanged = '${{ needs.changes.outputs.k8s }}' === 'true';
+
+            const backendResult = '${{ needs.backend.result }}';
+            const frontendResult = '${{ needs.frontend.result }}';
+            const k8sResult = '${{ needs.k8s-validate.result }}';
+
+            function statusEmoji(result, changed) {
+              if (!changed) return '⏭️ Skipped';
+              if (result === 'success') return '✅ Pass';
+              if (result === 'failure') return '❌ Fail';
+              if (result === 'cancelled') return '⚠️ Cancelled';
+              return '⏭️ Skipped';
+            }
+
+            const checks = [
+              { name: 'Backend (build/test/security)', changed: backendChanged, result: backendResult },
+              { name: 'Frontend (lint/type-check/build)', changed: frontendChanged, result: frontendResult },
+              { name: 'K8s Validation (kubeconform)', changed: k8sChanged, result: k8sResult },
+            ];
+
+            const rows = checks.map(c =>
+              `| ${c.name} | ${statusEmoji(c.result, c.changed)} | ${!c.changed ? 'No changes detected' : '-'} |`
+            ).join('\n');
+
+            const hasFailure = checks.some(c => c.changed && c.result === 'failure');
+            const verdict = hasFailure
+              ? '❌ Some checks failed — please fix before merging'
+              : '✅ All checks passed';
+
+            const marker = '<!-- pr-review-summary -->';
+            const body = `${marker}\n## CI Review Summary\n\n| Check | Status | Details |\n|-------|--------|--------|\n${rows}\n\n**Result**: ${verdict}\n`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
