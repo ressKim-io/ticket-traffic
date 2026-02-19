@@ -4,8 +4,8 @@ spring:
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sportstix_game}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    username: ${SPRING_DATASOURCE_USERNAME:game_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:game_pass}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -21,6 +21,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    user: ${SPRING_FLYWAY_USER:postgres}
+    password: ${SPRING_FLYWAY_PASSWORD:postgres}
 
   data:
     redis:
