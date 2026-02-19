@@ -155,7 +155,7 @@ jobs:
             const frontendResult = '${{ needs.frontend.result }}';
             const k8sResult = '${{ needs.k8s-validate.result }}';
 
-            function statusEmoji(result, changed) {
+            function statusIcon(result, changed) {
               if (!changed) return '⏭️ Skipped';
               if (result === 'success') return '✅ Pass';
               if (result === 'failure') return '❌ Fail';
@@ -170,16 +170,35 @@ jobs:
             ];
 
             const rows = checks.map(c =>
-              `| ${c.name} | ${statusEmoji(c.result, c.changed)} | ${!c.changed ? 'No changes detected' : '-'} |`
+              `| ${c.name} | ${statusIcon(c.result, c.changed)} | ${!c.changed ? 'No changes detected' : '-'} |`
             ).join('\n');
 
-            const hasFailure = checks.some(c => c.changed && c.result === 'failure');
-            const verdict = hasFailure
-              ? '❌ Some checks failed — please fix before merging'
-              : '✅ All checks passed';
+            const executed = checks.filter(c => c.changed);
+            const hasFailure = executed.some(c => c.result === 'failure');
+            const allSkipped = executed.length === 0;
+
+            let verdict;
+            if (hasFailure) {
+              verdict = '❌ Some checks failed — please fix before merging';
+            } else if (allSkipped) {
+              verdict = '➖ No checks required — only non-code files changed';
+            } else {
+              const passCount = executed.filter(c => c.result === 'success').length;
+              verdict = `✅ All checks passed (${passCount}/${executed.length})`;
+            }
 
             const marker = '<!-- pr-review-summary -->';
-            const body = `${marker}\n## CI Review Summary\n\n| Check | Status | Details |\n|-------|--------|--------|\n${rows}\n\n**Result**: ${verdict}\n`;
+            const body = [
+              marker,
+              '## CI Review Summary',
+              '',
+              '| Check | Status | Details |',
+              '|-------|--------|--------|',
+              rows,
+              '',
+              `**Result**: ${verdict}`,
+              '',
+            ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
