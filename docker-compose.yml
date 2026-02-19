@@ -101,8 +101,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_auth
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_DATASOURCE_USERNAME: auth_user
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:-auth_pass}
+      SPRING_FLYWAY_USER: ${POSTGRES_USER:-postgres}
+      SPRING_FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
@@ -135,8 +137,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_game
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_DATASOURCE_USERNAME: game_user
+      SPRING_DATASOURCE_PASSWORD: ${GAME_DB_PASSWORD:-game_pass}
+      SPRING_FLYWAY_USER: ${POSTGRES_USER:-postgres}
+      SPRING_FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: game-service
@@ -198,8 +202,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_booking
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_DATASOURCE_USERNAME: booking_user
+      SPRING_DATASOURCE_PASSWORD: ${BOOKING_DB_PASSWORD:-booking_pass}
+      SPRING_FLYWAY_USER: ${POSTGRES_USER:-postgres}
+      SPRING_FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: booking-service
@@ -232,8 +238,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8085
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_payment
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_DATASOURCE_USERNAME: payment_user
+      SPRING_DATASOURCE_PASSWORD: ${PAYMENT_DB_PASSWORD:-payment_pass}
+      SPRING_FLYWAY_USER: ${POSTGRES_USER:-postgres}
+      SPRING_FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: payment-service
       JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
@@ -263,8 +271,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8086
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sportstix_admin
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_DATASOURCE_USERNAME: admin_user
+      SPRING_DATASOURCE_PASSWORD: ${ADMIN_DB_PASSWORD:-admin_pass}
+      SPRING_FLYWAY_USER: ${POSTGRES_USER:-postgres}
+      SPRING_FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_SERVICE_NAME: admin-service
       JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
