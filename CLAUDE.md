@@ -12,12 +12,13 @@
 
 ## CRITICAL Rules
 
-1. **No Secrets in Code** - Use environment variables or secret managers
-2. **Frequent Commits** - Commit every logical unit of work (function, config, test)
-3. **Test Coverage** - Minimum 80%, all new features must include tests
-4. **No N+1 Queries** - Use fetch join/@EntityGraph or jOOQ
-5. **Data Locality** - Services must NOT call each other via REST for writes. Use Kafka events.
-6. **Docker First** - 모든 것은 Docker 위에서 실행한다. 로컬 설치 의존 금지.
+1. **MANDATORY WORKFLOW** - 아래 "Fixed Routine"을 반드시 따른다. 단 한 단계도 건너뛸 수 없다.
+2. **No Secrets in Code** - Use environment variables or secret managers
+3. **Frequent Commits** - Commit every logical unit of work (function, config, test)
+4. **Test Coverage** - Minimum 80%, all new features must include tests
+5. **No N+1 Queries** - Use fetch join/@EntityGraph or jOOQ
+6. **Data Locality** - Services must NOT call each other via REST for writes. Use Kafka events.
+7. **Docker First** - 모든 것은 Docker 위에서 실행한다. 로컬 설치 의존 금지.
 
 ## Docker Environment (필수)
 
@@ -41,62 +42,114 @@ docker compose -f docker-compose.yml up --build {service}  # 개별 서비스
 - 환경변수는 `.env` 파일 + `docker-compose.yml`의 environment로 관리
 - `docker compose logs -f {service}` 로 로그 확인
 
-## Ticket Workflow (필수 프로세스)
+## Fixed Routine (절대 루틴)
 
-**이 워크플로우는 모든 티켓에 영구 적용된다. 예외 없음.**
+**이 루틴은 모든 작업에 무조건 적용된다. 예외 없음. 단계를 건너뛰거나 순서를 바꿀 수 없다.**
 
-### 1. Branch 생성 (main에서 분기)
+```
+STEP 1 → 2 → 3 → 4 → 5 → 6 → 7 (순서 고정, 스킵 불가)
+```
+
+---
+
+### STEP 1. Branch 생성
+> 반드시 main에서 최신 상태로 분기한다.
+
 ```bash
 git switch main
 git pull origin main
 git switch -c feature/TICKET-{number}-description
 ```
 
-### 2. 구현 + 작은 단위 커밋
-- 파일 1-3개 변경될 때마다 즉시 커밋
-- 설정, 엔티티, 서비스, 컨트롤러, 테스트 각각 별도 커밋
-- Docker 환경에서 동작 확인 후 커밋
+---
 
-### 3. PR 생성
+### STEP 2. 구현 + 촘촘한 커밋
+> 파일 1-3개 변경될 때마다 즉시 커밋한다. 한 번에 몰아서 커밋 금지.
+
+**커밋 단위 (각각 별도 커밋)**:
+- 설정 파일 (build.gradle, application.yml, docker-compose 등)
+- Entity / Domain 클래스
+- Repository / DAO
+- Service 로직
+- Controller / API
+- Test 코드
+- Infra / K8s manifest
+
+**커밋 포맷**: `<type>(<scope>): <subject>`
+- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+- Scopes: `common`, `gateway`, `auth`, `game`, `queue`, `booking`, `payment`, `admin`, `frontend`, `infra`, `k8s`, `ci`
+- 예: `feat(auth): add Member entity` → `feat(auth): add MemberRepository` → `test(auth): add AuthService unit tests`
+
+---
+
+### STEP 3. Review (push 전 필수)
+> 구현이 끝나면 push 하기 전에 반드시 리뷰를 실행한다.
+
+| 작업 유형 | 리뷰 명령어 |
+|-----------|-------------|
+| Backend (Java/Spring) | `/backend:review` |
+| Frontend (Next.js) | `/frontend-review` 또는 lint + build 확인 |
+| Infra (K8s) | `/k8s:validate` |
+| Infra (Terraform) | `/terraform:validate` |
+
+**Critical/High 이슈 발견 시**: 반드시 수정 커밋 → 재리뷰 후 다음 단계로 진행.
+리뷰에서 Critical/High가 0이 될 때까지 STEP 4로 넘어갈 수 없다.
+
+---
+
+### STEP 4. Push
 ```bash
 git push -u origin feature/TICKET-{number}-description
 ```
-→ `/pr-create` 실행하여 PR 자동 생성
 
-### 4. 리뷰
-- Backend 티켓: `/backend review` 실행
-- Frontend 티켓: `/java review` 대신 lint + build 확인
-- Infra 티켓: `/k8s validate` 또는 `/terraform validate` 실행
-- **Critical/High 이슈 → 반드시 수정 커밋 후 push**
+---
 
-### 5. Merge → main Pull → 다음 티켓
+### STEP 5. PR 생성
+> `/dx:pr-create` 실행하여 PR 자동 생성
+
+---
+
+### STEP 6. CI 확인 → Merge
+> CI가 통과할 때까지 merge하지 않는다.
+
 ```bash
-gh pr merge --squash                          # PR 머지 (squash)
+gh pr checks {pr-number} --watch              # CI 통과 대기
+gh pr merge {pr-number} --squash --delete-branch  # squash merge + branch 정리
+```
+
+**CI 실패 시**: 원인 파악 → 수정 커밋 → push → CI 재확인 → 통과 후 merge.
+
+---
+
+### STEP 7. main 복귀 + Pull
+> merge 완료 후 반드시 main으로 돌아와 최신화한다. 여기까지가 1사이클.
+
+```bash
 git switch main
-git pull origin main                          # main 최신화
-git switch -c feature/TICKET-{next}-...       # 다음 티켓 시작
+git pull origin main
 ```
 
-### 전체 흐름 요약
+**이 단계를 완료해야 다음 작업을 시작할 수 있다.**
+
+---
+
+### 전체 사이클 요약
 ```
-main pull → branch 생성 → 구현(작은 커밋) → push → PR 생성 → review → fix → merge → main pull → 반복
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 1. branch 생성 (main에서)                                  │
+│  STEP 2. 구현 + 촘촘한 커밋 (1-3파일마다)                         │
+│  STEP 3. review (Critical/High 0건까지)                          │
+│  STEP 4. push                                                    │
+│  STEP 5. PR 생성 (/dx:pr-create)                                 │
+│  STEP 6. CI 통과 확인 → merge (--squash --delete-branch)         │
+│  STEP 7. main 복귀 + pull                                        │
+│  ─────────── 1 사이클 완료. 다음 작업 시작 가능 ──────────────    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-> **절대 규칙**: PR + review 없이 다음 티켓으로 넘어가지 않는다.
+> **위반 불가**: 어떤 상황에서도 이 순서를 지킨다. "나중에 하겠다", "이번만 건너뛰겠다"는 없다.
 
 ## Git Conventions
-
-### Commit Strategy (촘촘한 커밋)
-- 파일 1-3개 변경될 때마다 커밋
-- 설정 파일, 엔티티, 서비스 로직, 테스트를 각각 별도 커밋
-- 예시: `feat(auth): add Member entity` → `feat(auth): add MemberRepository` → `feat(auth): add AuthService` → `test(auth): add AuthService unit tests`
-
-### Commit Format
-```
-<type>(<scope>): <subject>
-```
-- **Types**: feat, fix, docs, style, refactor, test, chore
-- **Scopes**: common, gateway, auth, game, queue, booking, payment, admin, frontend, infra, k8s, ci
 
 ### Branch Naming
 ```
@@ -199,6 +252,8 @@ com.sportstix.{service}/
 - jOOQ codegen: `./gradlew :booking-service:generateJooq`
 
 ## Skills Reference
+
+### Spring / Java
 - `/spring-data` - JPA, QueryDSL patterns (Cold Path)
 - `/jooq-hybrid` - jOOQ + JPA hybrid strategy (Hot Path: 좌석 락킹, Bulk, Local Replica)
 - `/spring-cache` - Redis caching strategy
@@ -207,21 +262,59 @@ com.sportstix.{service}/
 - `/spring-testing` - JUnit, Mockito
 - `/spring-testcontainers` - Integration tests with Testcontainers
 - `/concurrency-spring` - Locking, deadlock prevention
+
+### MSA Patterns
 - `/distributed-lock` - Redis/Redisson distributed lock
 - `/msa-saga` - SAGA orchestration pattern
 - `/msa-event-driven` - Event-driven architecture
 - `/msa-resilience` - Circuit Breaker, Bulkhead
 - `/high-traffic-design` - High concurrency system design
+- `/api-design` - REST API design (RFC 9457 errors)
+
+### Kafka (심화)
 - `/kafka` - Kafka producer/consumer patterns
 - `/kafka-patterns` - Advanced Kafka patterns (DLQ, idempotency)
+- `/kafka-advanced` - Transactional API, Exactly-Once, KIP-848 리밸런싱, Offset 전략
+- `/kafka-streams` - KTable, Windowing, Interactive Queries, Stateful Processing
+- `/kafka-connect-cdc` - Debezium CDC, Outbox Event Router, Schema Registry
+
+### Istio Service Mesh
+- `/istio-core` - Istio 핵심 개념 (Sidecar vs Ambient)
+- `/istio-gateway` - Gateway API vs Istio Gateway 비교 허브
+- `/istio-gateway-classic` - Istio Gateway + VirtualService 라우팅
+- `/istio-gateway-api` - K8s Gateway API + HTTPRoute 라우팅
+- `/istio-security` - mTLS, PeerAuthentication, AuthorizationPolicy, JWT
+- `/istio-advanced-traffic` - Fault Injection, Traffic Mirroring, Canary, JWT Claim 라우팅
+- `/istio-metrics` - Prometheus 연동, ServiceMonitor, RED 메트릭
+- `/istio-observability` - 모니터링 통합 허브 (메트릭, 트레이싱, Kiali)
+- `/istio-otel` - OpenTelemetry 통합, Telemetry API, W3C Trace Context
+- `/istio-tracing` - Jaeger/Tempo 분산 트레이싱
+- `/istio-kiali` - Kiali 서비스 토폴로지 시각화
+- `/istio-ext-authz` - External Authorization (OPA, 외부 인증 서버)
+- `/istio-ambient` - Ambient Mode (ztunnel, Waypoint)
+- `/istio-multicluster` - Multi-Primary, East-West Gateway
+
+### Kubernetes
+- `/k8s-autoscaling` - HPA, VPA configuration
+- `/k8s-autoscaling-advanced` - Karpenter, 조합 전략, 모니터링
+- `/k8s-scheduling-advanced` - 실전 시나리오, Topology Spread, 디버깅
+- `/k8s-traffic` - 트래픽 제어 허브 (Rate Limiting, Circuit Breaker)
+- `/k8s-traffic-istio` - Istio Rate Limiting & Circuit Breaker
+- `/k8s-traffic-ingress` - NGINX Ingress Rate Limiting
+- `/gateway-api` - K8s Gateway API (Ingress 후속)
+- `/gateway-api-migration` - Ingress → Gateway API 마이그레이션
+
+### Infrastructure
 - `/redis-streams` - Redis data structures and patterns
-- `/api-design` - REST API design (RFC 9457 errors)
 - `/docker` - Multi-stage Dockerfile optimization
 - `/database` - Index, query optimization
 - `/database-migration` - Flyway migration strategy
-- `/k8s-autoscaling` - HPA, VPA configuration
+
+### Observability
 - `/observability` - Logging, metrics (RED Method)
 - `/load-testing` - K6/Gatling load test
+
+### Frontend
 - `/nextjs-app-router` - Next.js 14 App Router (Server/Client Components, Streaming)
 - `/react-components` - React 19 patterns (useActionState, useOptimistic, WebSocket)
 - `/zustand-state` - Zustand state management with Next.js 14
@@ -243,6 +336,9 @@ com.sportstix.{service}/
 - `@k8s-troubleshooter` - Kubernetes debugging
 - `@ci-optimizer` - CI/CD pipeline optimization
 - `@frontend-expert` - Next.js 14 + React 19, Zustand, TanStack Query, Tailwind
+- `@otel-expert` - OpenTelemetry 대규모 트래픽 설정 (Istio + OTel 통합)
+- `@incident-responder` - Production incident triage, RCA, guided remediation
+- `@security-scanner` - Security vulnerability scanning, misconfiguration detection
 
 ## Design Documents (Reference)
 All design documents are in `tmp/` directory:
