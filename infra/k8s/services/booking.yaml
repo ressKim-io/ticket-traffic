@@ -86,6 +86,8 @@ spec:
                 name: booking-config
             - secretRef:
                 name: db-secret
+            - secretRef:
+                name: booking-db-secret
           env:
             - name: JAVA_OPTS
               value: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"

@@ -10,7 +10,6 @@ data:
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka.sportstix.svc.cluster.local:9092"
   SPRING_DATA_REDIS_HOST: "redis.sportstix.svc.cluster.local"
   SPRING_DATA_REDIS_PORT: "6379"
-  SPRING_DATASOURCE_USERNAME: "postgres"
   SPRING_JPA_OPEN_IN_VIEW: "false"
   SPRING_JPA_HIBERNATE_DDL_AUTO: "validate"
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus"

@@ -55,6 +55,8 @@ spec:
             - secretRef:
                 name: db-secret
             - secretRef:
+                name: auth-db-secret
+            - secretRef:
                 name: jwt-secret
           env:
             - name: JAVA_OPTS

@@ -54,6 +54,8 @@ spec:
                 name: admin-config
             - secretRef:
                 name: db-secret
+            - secretRef:
+                name: admin-db-secret
           env:
             - name: JAVA_OPTS
               value: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -javaagent:/app/opentelemetry-javaagent.jar"
