@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - auth.yaml
+  - game.yaml
+  - queue.yaml
+  - booking.yaml
+  - payment.yaml
+  - admin.yaml
+  - frontend.yaml
+
+images:
+  - name: sportstix/auth-service
+    newTag: latest
+  - name: sportstix/game-service
+    newTag: latest
+  - name: sportstix/booking-service
+    newTag: latest
+  - name: sportstix/payment-service
+    newTag: latest
+  - name: sportstix/queue-service
+    newTag: latest
+  - name: sportstix/admin-service
+    newTag: latest
+  - name: sportstix/frontend
+    newTag: latest
