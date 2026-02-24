@@ -14,7 +14,7 @@ services:
       PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-payment_pass}
       ADMIN_DB_PASSWORD: ${ADMIN_DB_PASSWORD:-admin_pass}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:15432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
@@ -31,7 +31,7 @@ services:
     image: redis:7-alpine
     container_name: sportstix-redis
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:16379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -74,7 +74,7 @@ services:
     image: provectuslabs/kafka-ui:v0.7.2
     container_name: sportstix-kafka-ui
     ports:
-      - "127.0.0.1:9090:8080"
+      - "127.0.0.1:19091:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: sportstix
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
@@ -94,9 +94,9 @@ services:
     volumes:
       - ./otel/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
     ports:
-      - "127.0.0.1:4317:4317"   # OTLP gRPC
-      - "127.0.0.1:4318:4318"   # OTLP HTTP
-      - "127.0.0.1:13133:13133" # Health check
+      - "127.0.0.1:24317:4317"   # OTLP gRPC
+      - "127.0.0.1:24318:4318"   # OTLP HTTP
+      - "127.0.0.1:23133:13133" # Health check
     depends_on:
       - tempo
     deploy:
@@ -115,7 +115,7 @@ services:
       - ./otel/tempo-config.yaml:/etc/tempo/config.yaml:ro
       - tempo_data:/var/tempo
     ports:
-      - "127.0.0.1:3200:3200"   # Tempo API
+      - "127.0.0.1:23200:3200"   # Tempo API
     deploy:
       resources:
         limits:
@@ -130,7 +130,7 @@ services:
       - ./otel/loki-config.yaml:/etc/loki/config.yaml:ro
       - loki_data:/loki
     ports:
-      - "127.0.0.1:3100:3100"
+      - "127.0.0.1:23100:3100"
     deploy:
       resources:
         limits:
@@ -170,7 +170,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     ports:
-      - "127.0.0.1:3001:3000"
+      - "127.0.0.1:23001:3000"
     depends_on:
       - tempo
       - loki
