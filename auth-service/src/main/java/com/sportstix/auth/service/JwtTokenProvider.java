@@ -97,6 +97,7 @@ public class JwtTokenProvider {
         }
         try {
             String base64 = pem
+                    .replace("\\n", "\n")
                     .replace("-----BEGIN PRIVATE KEY-----", "")
                     .replace("-----END PRIVATE KEY-----", "")
                     .replaceAll("\\s+", "");
@@ -111,6 +112,7 @@ public class JwtTokenProvider {
     private static PublicKey parsePublicKey(String pem) {
         try {
             String base64 = pem
+                    .replace("\\n", "\n")
                     .replace("-----BEGIN PUBLIC KEY-----", "")
                     .replace("-----END PUBLIC KEY-----", "")
                     .replaceAll("\\s+", "");

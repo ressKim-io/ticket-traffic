@@ -37,7 +37,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     public JwtAuthFilter(
             @Value("${gateway.jwt.public-key}") String publicKeyPem,
-            @Value("${gateway.jwt.public-paths}") List<String> publicPaths) {
+            @Value("${gateway.jwt.public-paths:/api/v1/auth/login,/api/v1/auth/signup,/api/v1/auth/refresh,/api/v1/games,/actuator/health}") List<String> publicPaths) {
         this.jwtParser = Jwts.parser()
                 .verifyWith(parsePublicKey(publicKeyPem))
                 .build();
@@ -108,6 +108,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private static PublicKey parsePublicKey(String pem) {
         try {
             String base64 = pem
+                    .replace("\\n", "\n")
                     .replace("-----BEGIN PUBLIC KEY-----", "")
                     .replace("-----END PUBLIC KEY-----", "")
                     .replaceAll("\\s+", "");
