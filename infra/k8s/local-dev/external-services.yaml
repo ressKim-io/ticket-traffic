@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-external
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+spec:
+  type: ExternalName
+  externalName: host.k3d.internal
+  ports:
+    - port: 5432
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-external
+  namespace: sportstix
+  labels:
+    app.kubernetes.io/part-of: sportstix
+spec:
+  type: ExternalName
+  externalName: host.k3d.internal
+  ports:
+    - port: 6379
+      protocol: TCP
