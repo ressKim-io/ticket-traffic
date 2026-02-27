@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: sportstix
     app.kubernetes.io/component: queue
 spec:
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate
@@ -20,8 +20,6 @@ spec:
       app.kubernetes.io/name: queue
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "true"
       labels:
         app.kubernetes.io/name: queue
         app.kubernetes.io/part-of: sportstix
@@ -33,7 +31,7 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: queue
