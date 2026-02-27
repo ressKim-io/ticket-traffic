@@ -20,27 +20,42 @@
 6. **Data Locality** - Services must NOT call each other via REST for writes. Use Kafka events.
 7. **Docker First** - 모든 것은 Docker 위에서 실행한다. 로컬 설치 의존 금지.
 
-## Docker Environment (필수)
+## Development Environment
 
-모든 인프라와 서비스는 Docker Compose 위에서 실행한다.
+두 가지 실행 모드를 지원한다. 상황에 맞게 선택.
 
-### 인프라 (항상 Docker)
+### Mode 1: Docker Compose (기본)
+
+모든 인프라와 서비스를 Docker Compose로 실행한다.
+
 ```bash
-docker compose -f infra/docker-compose.yml up -d   # PostgreSQL, Redis, Kafka, Kafka UI
-```
-
-### 개발 서비스 (Docker 빌드 & 실행)
-```bash
-docker compose -f docker-compose.yml up --build     # 전체 서비스 빌드 + 실행
+docker compose -f infra/docker-compose.yml up -d        # 인프라: PostgreSQL, Redis, Kafka, Kafka UI
+docker compose -f docker-compose.yml up --build          # 전체 서비스 빌드 + 실행
 docker compose -f docker-compose.yml up --build {service}  # 개별 서비스
+docker compose logs -f {service}                         # 로그 확인
 ```
+
+### Mode 2: k3d (Kubernetes 로컬 배포)
+
+k3d 클러스터에서 K8s 매니페스트 기반으로 전체 서비스를 배포한다.
+PostgreSQL/Redis는 로컬 systemd, Kafka와 앱 서비스는 K8s Pod로 실행.
+
+```bash
+./scripts/k3d-local-setup.sh              # 최초 전체 설정 (클러스터 생성 ~ Pod 배포)
+./scripts/k3d-local-setup.sh restart      # 재부팅 후 복구 (iptables + Pod 재시작)
+./scripts/k3d-local-setup.sh build        # 이미지만 재빌드 + k3d import
+./scripts/k3d-local-setup.sh iptables     # iptables 규칙만 재적용
+```
+
+**k3d 주의사항**:
+- 재부팅 시 iptables 규칙이 초기화됨 → `restart` 명령으로 복구
+- Bitnami Helm 차트 유료화 → apache/kafka 공식 이미지 직접 사용
+- Kafka probe는 tcpSocket만 사용 (JVM CLI probe는 CrashLoop 유발)
+- 트러블슈팅 로그: `docs/dev-logs/2026-02-27-k3d-local-deploy-troubleshooting.md`
 
 ### 원칙
-- **로컬에 PostgreSQL, Redis, Kafka 설치 금지** → Docker Compose로만 실행
-- 각 서비스는 Dockerfile을 가지며, `docker compose`로 빌드/실행
-- Gradle 빌드도 Docker 멀티스테이지 빌드 안에서 수행
-- 환경변수는 `.env` 파일 + `docker-compose.yml`의 environment로 관리
-- `docker compose logs -f {service}` 로 로그 확인
+- 각 서비스는 Dockerfile을 가지며 Docker 멀티스테이지 빌드로 수행
+- 환경변수는 `.env` 파일 + `docker-compose.yml` 또는 K8s ConfigMap/Secret으로 관리
 
 ## Fixed Routine (절대 루틴)
 
