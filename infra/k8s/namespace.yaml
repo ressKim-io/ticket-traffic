@@ -5,5 +5,5 @@ metadata:
   labels:
     app.kubernetes.io/part-of: sportstix
     app.kubernetes.io/managed-by: kubectl
-    istio-injection: enabled
+
     goldilocks.fairwinds.com/enabled: "true"
