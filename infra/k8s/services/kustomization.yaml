@@ -12,16 +12,16 @@ resources:
 
 images:
   - name: sportstix/auth-service
-    newTag: latest
+    newTag: dev
   - name: sportstix/game-service
-    newTag: latest
+    newTag: dev
   - name: sportstix/booking-service
-    newTag: latest
+    newTag: dev
   - name: sportstix/payment-service
-    newTag: latest
+    newTag: dev
   - name: sportstix/queue-service
-    newTag: latest
+    newTag: dev
   - name: sportstix/admin-service
-    newTag: latest
+    newTag: dev
   - name: sportstix/frontend
-    newTag: latest
+    newTag: dev
