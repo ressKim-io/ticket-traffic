@@ -8,52 +8,24 @@ metadata:
     app.kubernetes.io/part-of: sportstix
     app.kubernetes.io/component: booking
 spec:
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 3
   strategy:
     canary:
-      canaryService: booking-canary
-      stableService: booking
-      trafficRouting:
-        istio:
-          virtualServices:
-            - name: booking-ws
-              routes:
-                - primary
-          destinationRule:
-            name: booking
-            canarySubsetName: canary
-            stableSubsetName: stable
       steps:
         - setWeight: 20
         - pause: { duration: 30s }
-        - analysis:
-            templates:
-              - templateName: success-rate
-              - templateName: latency-check
-            args:
-              - name: service-name
-                value: booking
         - setWeight: 40
         - pause: { duration: 30s }
         - setWeight: 60
         - pause: { duration: 30s }
         - setWeight: 80
         - pause: { duration: 30s }
-        - analysis:
-            templates:
-              - templateName: success-rate
-              - templateName: latency-check
-            args:
-              - name: service-name
-                value: booking
   selector:
     matchLabels:
       app.kubernetes.io/name: booking
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "true"
       labels:
         app.kubernetes.io/name: booking
         app.kubernetes.io/part-of: sportstix
@@ -65,7 +37,7 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: booking
@@ -141,25 +113,6 @@ metadata:
   labels:
     app.kubernetes.io/name: booking
     app.kubernetes.io/part-of: sportstix
-spec:
-  type: ClusterIP
-  selector:
-    app.kubernetes.io/name: booking
-  ports:
-    - port: 8084
-      targetPort: http
-      protocol: TCP
-      name: http
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: booking-canary
-  namespace: sportstix
-  labels:
-    app.kubernetes.io/name: booking
-    app.kubernetes.io/part-of: sportstix
-    app.kubernetes.io/component: canary
 spec:
   type: ClusterIP
   selector:
