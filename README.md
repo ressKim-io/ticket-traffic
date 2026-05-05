@@ -2,6 +2,11 @@
 
 MSA Event-Driven sports ticketing system designed for high-concurrency seat booking (100K+ concurrent users).
 
+> **Status**: POC / Archived (last activity: Feb 2026)
+> This repository is a **solo pre-experiment** built before joining a team-based production ticketing project (private).
+> It validates an end-to-end MSA + Kafka + Istio + ArgoCD stack at small scale so that architecture decisions on the real project could be made with confidence.
+> See [Project Context](#project-context) at the bottom for what was carried over and what was deliberately changed.
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -321,6 +326,30 @@ sportstix/
 ├── build.gradle             # Root build config
 └── docker-compose.yml       # Service orchestration
 ```
+
+## Project Context
+
+This is a **solo pre-experiment** (Feb 2026) built before joining a team-based production ticketing project. The goal was to **validate end-to-end the MSA + Kafka + K8s stack** in a small but full-fidelity environment so architecture decisions on the real project could be made with confidence.
+
+### What was validated here → applied to the team project
+
+- Istio IngressGateway + RS256/JWKS JWT authentication pattern
+- ArgoCD ApplicationSet (multi-env via goTemplate generator)
+- Argo Rollouts canary + Prometheus AnalysisTemplate gates
+- KEDA autoscaling triggers (Kafka lag, Redis list length, CPU/memory)
+- OTel + Loki + Tempo + Prometheus observability stack
+- Velero (DR), Chaos Mesh, Falco (runtime), Trivy + Cosign (supply chain)
+- DDD-style bounded context separation per service
+
+### What this experiment changed my mind about
+
+- **Kafka-everywhere → reduced**: Running Kafka full-stack here showed the operational cost outweighed the benefits at our actual scale. The team project ultimately removed Kafka in favor of simpler synchronous patterns where appropriate.
+- **Redis Sorted Set queue → CDN-based queue**: Real load characteristics (and CDN cost economics) led to a different waiting-room architecture in the production project.
+- **3-tier locking pragmatism**: The Redis → DB pessimistic → optimistic chain works, but the second tier proved redundant in practice when Redis lock TTL is tuned correctly.
+
+### Why this repo is left as-is
+
+This experiment served its purpose (informing real-project decisions) and is intentionally not maintained. It is kept public as a reference snapshot of the patterns evaluated.
 
 ## License
 
